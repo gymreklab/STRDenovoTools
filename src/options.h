@@ -36,6 +36,7 @@ class Options {
   std::string outprefix;
 
   // Filtering loci
+  std::string region;
   int max_num_alleles;
 
   // Options for denovo calling

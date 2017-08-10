@@ -50,6 +50,7 @@ void show_help() {
 	   << "********* Filtering calls **********************\n"
 	   << "********* Filtering samples ********************\n"
 	   << "********* Filtering loci ***********************\n"
+	   << " --region                   Restrict to loci in this region (chrom:start-end). \n"
 	   << " --max-num-alleles          Filter loci with more than this many alleles. \n"
 	   << "********* Parameters for de novo calling *******\n"
 	   << "--combine-alleles-by-length Collapse alleles of the same length to one. \n"
@@ -69,6 +70,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_HELP,
     OPT_MAXNUMALLELES,
     OPT_OUT,
+    OPT_REGION,
     OPT_STRVCF,
     OPT_USEPOPPRIORS,
     OPT_VERBOSE,
@@ -80,6 +82,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"help", 0, 0, OPT_HELP},
     {"max-num-alleles", 1, 0, OPT_MAXNUMALLELES},
     {"out", 1, 0, OPT_OUT},
+    {"region", 1, 0, OPT_REGION},
     {"strvcf", 1, 0, OPT_STRVCF},
     {"use-pop-priors", 0, 0, OPT_USEPOPPRIORS},
     {"verbose", 0, 0, OPT_VERBOSE},
@@ -106,6 +109,9 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
       break;
     case OPT_OUT:
       options->outprefix = optarg;
+      break;
+    case OPT_REGION:
+      options->region = optarg;
       break;
     case OPT_STRVCF:
       options->strvcf = optarg;
@@ -159,6 +165,9 @@ int main(int argc, char* argv[]) {
   }
   VCF::VCFReader strvcf(options.strvcf);
   std::set<std::string> str_samples(strvcf.get_samples().begin(), strvcf.get_samples().end());
+  if (!options.region.empty()) {
+    strvcf.set_region(options.region);
+  }
 
   // Extract nuclear families for samples with data
   if (!file_exists(options.famfile)) {

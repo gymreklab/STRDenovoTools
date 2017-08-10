@@ -30,6 +30,7 @@ Options::Options() {
   verbose = false;
 
   max_num_alleles = 25;
+  region = "";
 }
 
 Options::~Options() {}
