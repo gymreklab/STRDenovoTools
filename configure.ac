@@ -32,7 +32,7 @@ AC_SUBST(MACHTYPE)
 PKG_CHECK_MODULES([GSL],[gsl])
 
 # Custom Flags to add to CFLAGS/CXXFLAGS
-SDT_CFLAGS="-D_GIT_VERSION=\"\\\"${GIT_VERSION}\\\"\" -D_MACHTYPE=\"\\\"${MACHTYPE}\\\"\""
+SDT_CFLAGS="-std=c++11 -D_GIT_VERSION=\"\\\"${GIT_VERSION}\\\"\" -D_MACHTYPE=\"\\\"${MACHTYPE}\\\"\""
 
 # Set the final value for CFLAGS/CXXFLAGS
 CFLAGS="$CFLAGS $SDT_CFLAGS"

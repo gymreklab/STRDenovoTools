@@ -27,7 +27,9 @@ noinst_LIBRARIES = libsdt.a
 libsdt_a_CPPFLAGS = $(AM_CPPFLAGS)
 libsdt_a_SOURCES = \
 	common.h common.cpp \
-	options.h options.cpp
+	options.h options.cpp \
+	pedigree.h pedigree.cpp \
+	vcf_reader.h vcf_reader.cpp
 
 STRDenovoTools_LDFLAGS = $(AM_LDFLAGS) $(HTS_LIBS)
 STRDenovoTools_SOURCES = main_sdt.cpp

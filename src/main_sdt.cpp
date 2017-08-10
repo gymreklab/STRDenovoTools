@@ -21,12 +21,21 @@ using namespace std;
 
 #include <getopt.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 
+#include <fstream>
 #include <iostream>
 #include <sstream>
 
 #include "src/common.h"
 #include "src/options.h"
+#include "src/pedigree.h"
+#include "src/vcf_reader.h"
+
+bool file_exists(const std::string& path){
+  return (access(path.c_str(), F_OK) != -1);
+}
 
 void show_help() {
   std::stringstream help_msg;
@@ -123,7 +132,24 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
 
 int main(int argc, char* argv[]) {
   // Set up
+  double total_time = clock();
   Options options;
   parse_commandline_options(argc, argv, &options);
+
+  // Extract nuclear families - TODO
+  if (!file_exists(options.famfile)) {
+    PrintMessageDieOnError("FAM file " + options.famfile + " does not exist.", M_ERROR);
+  }
+  PedigreeSet pedigree_set;
+  if (!pedigree_set.ExtractFamilies(options.famfile)) {
+    PrintMessageDieOnError("Error extracting families from the pedigree.", M_ERROR);
+  }
+  pedigree_set.PrintStatus();
+
+  // Tear down
+  total_time = (clock() - total_time)/CLOCKS_PER_SEC;
+  stringstream ss;
+  ss << "Total run time = " << total_time << " sec";
+  PrintMessageDieOnError(ss.str(), M_PROGRESS);
   return 0;
 }
