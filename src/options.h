@@ -35,7 +35,11 @@ class Options {
   std::string famfile;
   std::string outprefix;
 
+  // Filtering loci
+  int max_num_alleles;
+
   // Options for denovo calling
+  bool use_pop_priors;
   bool combine_alleles;
 
   // Other options

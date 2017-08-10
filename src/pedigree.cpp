@@ -28,11 +28,15 @@ using namespace std;
 
 PedigreeSet::PedigreeSet() {}
 
-bool PedigreeSet::ExtractFamilies(const std::string& famfile) {
+bool PedigreeSet::ExtractFamilies(const std::string& famfile,
+				  const std::set<std::string>& samples) {
   families.clear();
 
   // Read original pedigree
   PedigreeGraph pedigree(famfile);
+
+  // Remove irrelevant samples
+  pedigree.prune(samples);
 
   // Identify simple nuclear families
   std::vector<PedigreeGraph*> pedigree_components;
@@ -67,7 +71,7 @@ void PedigreeSet::PrintStatus() {
     }
   }
   stringstream ss;
-  ss << "PedigreeSet has " << families.size() << " nuclear families. " << endl
+  ss << "PedigreeSet has " << families.size() << " nuclear families with STR data. " << endl
      << "  Unaffected children: " << unaffected << endl
      << "  Affected children: " << affected << endl
      << "  Unknown children: " << unknown;

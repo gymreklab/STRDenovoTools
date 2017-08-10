@@ -26,9 +26,11 @@ using namespace std;
 
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
 
 #include "src/common.h"
+#include "src/denovo_scanner.h"
 #include "src/options.h"
 #include "src/pedigree.h"
 #include "src/vcf_reader.h"
@@ -48,8 +50,10 @@ void show_help() {
 	   << "********* Filtering calls **********************\n"
 	   << "********* Filtering samples ********************\n"
 	   << "********* Filtering loci ***********************\n"
+	   << " --max-num-alleles          Filter loci with more than this many alleles. \n"
 	   << "********* Parameters for de novo calling *******\n"
 	   << "--combine-alleles-by-length Collapse alleles of the same length to one. \n"
+	   << "--use-pop-priors            Get genotype priors from population. \n"
 	   << "********* Other options ************************\n"
 	   << "-h,--help      display this help screen\n"
 	   << "-v,--verbose   print out useful progress messages\n"
@@ -63,8 +67,10 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_COMBINEALLELES,
     OPT_FAM,
     OPT_HELP,
+    OPT_MAXNUMALLELES,
     OPT_OUT,
     OPT_STRVCF,
+    OPT_USEPOPPRIORS,
     OPT_VERBOSE,
     OPT_VERSION,
   };
@@ -72,8 +78,10 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"combine-alleles-by-length", 0, 0, OPT_COMBINEALLELES},
     {"fam", 1, 0, OPT_FAM},
     {"help", 0, 0, OPT_HELP},
+    {"max-num-alleles", 1, 0, OPT_MAXNUMALLELES},
     {"out", 1, 0, OPT_OUT},
     {"strvcf", 1, 0, OPT_STRVCF},
+    {"use-pop-priors", 0, 0, OPT_USEPOPPRIORS},
     {"verbose", 0, 0, OPT_VERBOSE},
     {"version", 0, 0, OPT_VERSION},
     {NULL, no_argument, NULL, 0},
@@ -93,11 +101,17 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     case OPT_HELP:
     case 'h':
       show_help();
+    case OPT_MAXNUMALLELES:
+      options->max_num_alleles = atoi(optarg);
+      break;
     case OPT_OUT:
       options->outprefix = optarg;
       break;
     case OPT_STRVCF:
       options->strvcf = optarg;
+      break;
+    case OPT_USEPOPPRIORS:
+      options->use_pop_priors++;
       break;
     case OPT_VERBOSE:
     case 'v':
@@ -136,15 +150,29 @@ int main(int argc, char* argv[]) {
   Options options;
   parse_commandline_options(argc, argv, &options);
 
-  // Extract nuclear families - TODO
+  // Load STR VCF file
+  if (!file_exists(options.strvcf)) {
+    PrintMessageDieOnError("STR vcf file " + options.strvcf + " does not exist.", M_ERROR);
+  }
+  if (!file_exists(options.strvcf + ".tbi")) {
+    PrintMessageDieOnError("No .tbi index found for " + options.strvcf, M_ERROR);
+  }
+  VCF::VCFReader strvcf(options.strvcf);
+  std::set<std::string> str_samples(strvcf.get_samples().begin(), strvcf.get_samples().end());
+
+  // Extract nuclear families for samples with data
   if (!file_exists(options.famfile)) {
     PrintMessageDieOnError("FAM file " + options.famfile + " does not exist.", M_ERROR);
   }
   PedigreeSet pedigree_set;
-  if (!pedigree_set.ExtractFamilies(options.famfile)) {
+  if (!pedigree_set.ExtractFamilies(options.famfile, str_samples)) {
     PrintMessageDieOnError("Error extracting families from the pedigree.", M_ERROR);
   }
   pedigree_set.PrintStatus();
+
+  // Run denovo analysis, based on trios
+  TrioDenovoScanner denovo_scanner(pedigree_set, options);
+  denovo_scanner.scan(strvcf);
 
   // Tear down
   total_time = (clock() - total_time)/CLOCKS_PER_SEC;

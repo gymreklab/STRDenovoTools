@@ -27,8 +27,15 @@ noinst_LIBRARIES = libsdt.a
 libsdt_a_CPPFLAGS = $(AM_CPPFLAGS)
 libsdt_a_SOURCES = \
 	common.h common.cpp \
+	denovo_allele_priors.h denovo_allele_priors.cpp \
+	denovo_scanner.h denovo_scanner.cpp \
+	fastonebigheader.h \
+	mathops.h mathops.cpp \
+	mutation_model.h mutation_model.cpp \
 	options.h options.cpp \
 	pedigree.h pedigree.cpp \
+	region.h region.cpp \
+	vcf_input.h vcf_input.cpp \
 	vcf_reader.h vcf_reader.cpp
 
 STRDenovoTools_LDFLAGS = $(AM_LDFLAGS) $(HTS_LIBS)

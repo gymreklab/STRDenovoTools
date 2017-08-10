@@ -17,20 +17,31 @@ You should have received a copy of the GNU General Public License
 along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef TRIO_DENOVO_SCANNER_H_
+#define TRIO_DENOVO_SCANNER_H_
+
+#include <assert.h>
+
+#include <iostream>
+#include <vector>
+#include <string>
+
 #include "src/options.h"
+#include "src/pedigree.h"
+#include "src/vcf_reader.h"
 
-using namespace std;
+class TrioDenovoScanner {
+ public:
+  TrioDenovoScanner(const PedigreeSet& pedigree_set,
+		    const Options& options)
+    : pedigree_set_(pedigree_set), options_(options) {}
+  virtual ~TrioDenovoScanner();
 
-Options::Options() {
-  strvcf = "";
-  famfile = "";
-  outprefix = "";
-  combine_alleles = false;
-  use_pop_priors = false;
-  verbose = false;
+  void scan(VCF::VCFReader& strvcf);
+ private:
+  static std::string START_KEY, END_KEY;
+  PedigreeSet pedigree_set_;
+  Options options_;
+};
 
-  max_num_alleles = 25;
-}
-
-Options::~Options() {}
-
+#endif

@@ -17,20 +17,3 @@ You should have received a copy of the GNU General Public License
 along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "src/options.h"
-
-using namespace std;
-
-Options::Options() {
-  strvcf = "";
-  famfile = "";
-  outprefix = "";
-  combine_alleles = false;
-  use_pop_priors = false;
-  verbose = false;
-
-  max_num_alleles = 25;
-}
-
-Options::~Options() {}
-

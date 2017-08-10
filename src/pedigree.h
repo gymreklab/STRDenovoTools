@@ -46,6 +46,13 @@ class NuclearFamily {
   virtual ~NuclearFamily();
   
   const std::vector<int>& GetChildrenStatus() {return children_status_;}
+  const std::string& get_family_id() const { return family_id_; }
+  const std::string& get_mother()    const { return mother_; }
+  const std::string& get_father()    const { return father_; }
+  const int size()                   const { return 2 + children_.size(); }
+  const int num_children()           const { return children_.size();      }
+  const std::vector<std::string>& get_children() const { return children_; }
+
  private:
   std::string family_id_;
   std::string mother_, father_;
@@ -59,9 +66,12 @@ class PedigreeSet {
   virtual ~PedigreeSet();
 
   // Load families from .fam file
-  bool ExtractFamilies(const std::string& famfile);
+  bool ExtractFamilies(const std::string& famfile,
+		       const std::set<std::string>& samples);
   // Print summary of loaded families
   void PrintStatus();
+
+  const std::vector<NuclearFamily> get_families() { return families; }
 
  private:
   std::vector<NuclearFamily> families;
