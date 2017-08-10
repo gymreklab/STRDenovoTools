@@ -31,6 +31,7 @@ Options::Options() {
 
   max_num_alleles = 25;
   region = "";
+  posterior_threshold = 0.9;
 }
 
 Options::~Options() {}

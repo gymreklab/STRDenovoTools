@@ -37,6 +37,7 @@ TrioDenovoScanner::~TrioDenovoScanner() {}
 void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
   VCF::Variant str_variant;
   while (strvcf.get_next_variant(str_variant)) {
+    std::vector<DenovoResult> denovo_results;
     // Initial checks
     int num_alleles = str_variant.num_alleles();
     if (num_alleles <= 1) {
@@ -85,7 +86,6 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 	double MIN_CONTRIBUTION   = 4 + 3*log10(num_alleles) + 2*log(num_alleles+1) + LOG_TWO;
 	double ll_no_mutation_max = -DBL_MAX/2, ll_no_mutation_total = 0.0;
 	double ll_one_denovo_max  = -DBL_MAX/2, ll_one_denovo_total  = 0.0;
-	double ll_one_other_max   = -DBL_MAX/2, ll_one_other_total   = 0.0;
 	int mother_gl_index       = unphased_gls.get_sample_index(family_iter->get_mother());
 	int father_gl_index       = unphased_gls.get_sample_index(family_iter->get_father());
 	int child_gl_index        = unphased_gls.get_sample_index(*child_iter);
@@ -112,31 +112,26 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 
 		    // All putative mutations to the maternal allele
 		    double max_ll_mat_mut = config_ll + unphased_gls.get_max_gl_allele_fixed(child_gl_index, pat_allele) + mut_model.max_log_prior_mutation(mat_allele);
-		    if (max_ll_mat_mut > std::min(ll_one_denovo_max, ll_one_other_max)-MIN_CONTRIBUTION){
+		    if (max_ll_mat_mut > ll_one_denovo_max-MIN_CONTRIBUTION){
 		      for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++){
 			if (mut_allele == mat_allele)
 			  continue;
-			double prob = config_ll + unphased_gls.get_gl(child_gl_index, std::min(mut_allele, pat_allele), std::max(mut_allele, pat_allele))
+			double prob = config_ll + unphased_gls.get_gl(child_gl_index, std::min(mut_allele, pat_allele), \
+								      std::max(mut_allele, pat_allele))
 			  + mut_model.log_prior_mutation(mat_allele, mut_allele);
-			if (mut_allele != mat_i && mut_allele != mat_j && mut_allele != pat_i && mut_allele != pat_j)
-			  update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
-			else
-			  update_streaming_log_sum_exp(prob, ll_one_other_max, ll_one_other_total);
+			update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
 		      }
 		    }
 
 		    // All putative mutations to the paternal allele
 		    double max_ll_pat_mut = config_ll + unphased_gls.get_max_gl_allele_fixed(child_gl_index, mat_allele) + mut_model.max_log_prior_mutation(pat_allele);
-		    if (max_ll_pat_mut > std::min(ll_one_denovo_max, ll_one_other_max)-MIN_CONTRIBUTION){
+		    if (max_ll_pat_mut > ll_one_denovo_max - MIN_CONTRIBUTION){
 		      for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++){
 			if (mut_allele == pat_allele)
 			  continue;
 			double prob = config_ll + unphased_gls.get_gl(child_gl_index, std::min(mat_allele, mut_allele), std::max(mat_allele, mut_allele))
 			  + mut_model.log_prior_mutation(pat_allele, mut_allele);
-			if (mut_allele != mat_i && mut_allele != mat_j && mut_allele != pat_i && mut_allele != pat_j)
-			  update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
-			else
-			  update_streaming_log_sum_exp(prob, ll_one_other_max, ll_one_other_total);
+			update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
 		      }
 		    }
 		  }
@@ -146,11 +141,72 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 	  }
 	}
 
-	// Compute total LL for each scenario and add it to the VCF
+	// Compute total LL for each scenario
 	double total_ll_no_mutation = finish_streaming_log_sum_exp(ll_no_mutation_max, ll_no_mutation_total);
 	double total_ll_one_denovo  = finish_streaming_log_sum_exp(ll_one_denovo_max,  ll_one_denovo_total);
-	double total_ll_one_other   = finish_streaming_log_sum_exp(ll_one_other_max,   ll_one_other_total);
+	
+	// Add to results
+	DenovoResult dnr(family_iter->get_family_id(), (*child_iter), family_iter->get_child_phenotype(*child_iter), total_ll_no_mutation, total_ll_one_denovo);
+	denovo_results.push_back(dnr);
       }
     }
+    summarize_results(denovo_results);
   }
 }
+
+void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr) {
+  int total_children = (int)dnr.size();
+  int total_unaffected = 0;
+  int total_affected = 0;
+  int num_mutations = 0;
+  int num_mutations_unaffected = 0;
+  int num_mutations_affected = 0;
+  for (auto dnr_iter = dnr.begin(); dnr_iter != dnr.end(); dnr_iter++) {
+    if (dnr_iter->get_phenotype() == PT_CONTROL) {
+      total_unaffected++;
+      num_mutations_unaffected += (int)(dnr_iter->get_posterior() > options_.posterior_threshold);
+    }
+    if (dnr_iter->get_phenotype() == PT_CASE) {
+      total_affected++;
+      num_mutations_affected += (int)(dnr_iter->get_posterior() > options_.posterior_threshold);
+    }
+    num_mutations += (int)(dnr_iter->get_posterior() > options_.posterior_threshold);
+  }
+  double total_mutation_rate = (double)(num_mutations)/(double)total_children;
+  double affected_mutation_rate = (double)(num_mutations_affected)/(double)total_affected;
+  double unaffected_mutation_rate = (double)(num_mutations_unaffected)/(double)total_unaffected;
+  std::stringstream ss;
+  ss << "   Analyzed " << total_children << " children\n"
+     << "      Total mutation rate: " << total_mutation_rate
+     << " (" << num_mutations << "/" << total_children << ")\n"
+     << "      Affected mutation rate: " << affected_mutation_rate
+     << " (" << num_mutations_affected << "/" << total_affected << ")\n"
+     << "      Unaffected mutation rate: " << unaffected_mutation_rate
+     << " (" << num_mutations_unaffected << "/" << total_unaffected << ")";
+  PrintMessageDieOnError(ss.str(), M_PROGRESS);
+}
+
+DenovoResult::DenovoResult(const std::string& family_id,
+			   const std::string& child_id,
+			   const int& phenotype,
+			   const double& total_ll_no_mutation,
+			   const double& total_ll_one_denovo) {
+  family_id_ = family_id;
+  child_id_ = child_id;
+  phenotype_ = phenotype;
+  total_ll_no_mutation_ = total_ll_no_mutation;
+  total_ll_one_denovo_ = total_ll_one_denovo;
+  CalculatePosterior();
+}
+
+void DenovoResult::CalculatePosterior() {
+  double mutation_rate = 0.00001;
+  double log_prior_mutation = log10(mutation_rate); // TODO change. and check if log10 vs. log?
+  double log_prior_nomut = log10(1-mutation_rate);
+  double denom = fast_log_sum_exp(total_ll_one_denovo_+log_prior_mutation,
+				  total_ll_no_mutation_+log_prior_nomut);
+  double posterior = exp(total_ll_one_denovo_+log_prior_mutation - denom);
+  posterior_ = posterior;
+}
+
+DenovoResult::~DenovoResult() {}

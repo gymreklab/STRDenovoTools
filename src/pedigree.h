@@ -44,8 +44,9 @@ class NuclearFamily {
 		const std::vector<std::string>& children,
 		const std::vector<int>& children_status);
   virtual ~NuclearFamily();
-  
-  const std::vector<int>& GetChildrenStatus() {return children_status_;}
+
+  const int get_child_phenotype(const std::string& child_id);
+  const std::vector<int>& GetChildrenStatus() const {return children_status_;}
   const std::string& get_family_id() const { return family_id_; }
   const std::string& get_mother()    const { return mother_; }
   const std::string& get_father()    const { return father_; }

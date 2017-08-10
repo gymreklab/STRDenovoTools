@@ -55,6 +55,7 @@ void show_help() {
 	   << "********* Parameters for de novo calling *******\n"
 	   << "--combine-alleles-by-length Collapse alleles of the same length to one. \n"
 	   << "--use-pop-priors            Get genotype priors from population. \n"
+	   << "--posterior-threshold       Cutoff to call something de novo. \n"
 	   << "********* Other options ************************\n"
 	   << "-h,--help      display this help screen\n"
 	   << "-v,--verbose   print out useful progress messages\n"
@@ -70,6 +71,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_HELP,
     OPT_MAXNUMALLELES,
     OPT_OUT,
+    OPT_POSTERIORTHRESHOLD,
     OPT_REGION,
     OPT_STRVCF,
     OPT_USEPOPPRIORS,
@@ -82,6 +84,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"help", 0, 0, OPT_HELP},
     {"max-num-alleles", 1, 0, OPT_MAXNUMALLELES},
     {"out", 1, 0, OPT_OUT},
+    {"posterior-threshold", 1, 0, OPT_POSTERIORTHRESHOLD},
     {"region", 1, 0, OPT_REGION},
     {"strvcf", 1, 0, OPT_STRVCF},
     {"use-pop-priors", 0, 0, OPT_USEPOPPRIORS},
@@ -109,6 +112,9 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
       break;
     case OPT_OUT:
       options->outprefix = optarg;
+      break;
+    case OPT_POSTERIORTHRESHOLD:
+      options->posterior_threshold = atof(optarg);
       break;
     case OPT_REGION:
       options->region = optarg;

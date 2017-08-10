@@ -91,6 +91,11 @@ NuclearFamily::NuclearFamily(const std::string& family_id,
   children_status_ = children_status;
 }
 
+const int NuclearFamily::get_child_phenotype(const std::string& child_id) {
+  size_t pos = find(children_.begin(), children_.end(), child_id) - children_.begin();
+  return children_status_[pos];
+}
+
 NuclearFamily::~NuclearFamily() {}
 
 void PedigreeGraph::init_no_ancestors() {

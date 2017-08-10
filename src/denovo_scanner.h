@@ -30,6 +30,28 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include "src/pedigree.h"
 #include "src/vcf_reader.h"
 
+class DenovoResult {
+ public:
+  DenovoResult(const std::string& family_id,
+	       const std::string& child_id,
+	       const int& phenotype,
+	       const double& total_ll_no_mutation,
+	       const double& total_ll_one_denovo);
+  virtual ~DenovoResult();
+
+  const int& get_phenotype() const {return phenotype_;}
+  const double& get_posterior() const {return posterior_;}
+  
+ private:
+  void CalculatePosterior();
+  std::string family_id_;
+  std::string child_id_;
+  int phenotype_;
+  double total_ll_no_mutation_;
+  double total_ll_one_denovo_;
+  double posterior_;
+};
+
 class TrioDenovoScanner {
  public:
   TrioDenovoScanner(const PedigreeSet& pedigree_set,
@@ -38,10 +60,12 @@ class TrioDenovoScanner {
   virtual ~TrioDenovoScanner();
 
   void scan(VCF::VCFReader& strvcf);
+  void summarize_results(std::vector<DenovoResult>& dnr);
  private:
   static std::string START_KEY, END_KEY;
   PedigreeSet pedigree_set_;
   Options options_;
 };
+
 
 #endif
