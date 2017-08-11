@@ -29,10 +29,15 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include "src/mutation_model.h"
 #include "src/vcf_input.h"
 
+#include "lib/htslib/htslib/kfunc.h"
+
 std::string TrioDenovoScanner::START_KEY   = "START";
 std::string TrioDenovoScanner::END_KEY     = "END";
+std::string TrioDenovoScanner::PERIOD_KEY  = "PERIOD";
 
-TrioDenovoScanner::~TrioDenovoScanner() {}
+TrioDenovoScanner::~TrioDenovoScanner() {
+  locus_summary_.close();
+}
 
 void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
   VCF::Variant str_variant;
@@ -150,31 +155,50 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 	denovo_results.push_back(dnr);
       }
     }
-    summarize_results(denovo_results);
+    summarize_results(denovo_results, str_variant);
   }
 }
 
-void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr) {
-  int total_children = (int)dnr.size();
+void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
+					  VCF::Variant& str_variant) {
+  int total_children = 0;
   int total_unaffected = 0;
   int total_affected = 0;
   int num_mutations = 0;
   int num_mutations_unaffected = 0;
   int num_mutations_affected = 0;
+  std::vector<std::string>children_with_mutations;
   for (auto dnr_iter = dnr.begin(); dnr_iter != dnr.end(); dnr_iter++) {
+    total_children++;
+    if (dnr_iter->get_posterior() > options_.posterior_threshold) {
+      num_mutations++;
+      children_with_mutations.push_back(dnr_iter->get_child_id());
+      if (dnr_iter->get_phenotype() == PT_CONTROL) {
+	num_mutations_unaffected++;
+      }
+      if (dnr_iter->get_phenotype() == PT_CASE) {
+	num_mutations_affected++;
+      }
+    }
     if (dnr_iter->get_phenotype() == PT_CONTROL) {
       total_unaffected++;
-      num_mutations_unaffected += (int)(dnr_iter->get_posterior() > options_.posterior_threshold);
     }
     if (dnr_iter->get_phenotype() == PT_CASE) {
       total_affected++;
-      num_mutations_affected += (int)(dnr_iter->get_posterior() > options_.posterior_threshold);
     }
-    num_mutations += (int)(dnr_iter->get_posterior() > options_.posterior_threshold);
   }
   double total_mutation_rate = (double)(num_mutations)/(double)total_children;
   double affected_mutation_rate = (double)(num_mutations_affected)/(double)total_affected;
   double unaffected_mutation_rate = (double)(num_mutations_unaffected)/(double)total_unaffected;
+  // Perform fisher exact test
+  double fisher_left_p, fisher_right_p, fisher_twosided_p;
+  int n11 = num_mutations_affected;
+  int n12 = total_affected - num_mutations_affected;
+  int n21 = num_mutations_unaffected;
+  int n22 = total_unaffected - num_mutations_unaffected;
+  kt_fisher_exact(n11, n12, n21, n22, &fisher_left_p, &fisher_right_p, &fisher_twosided_p);
+  double p_value = fisher_right_p;
+  // Output status
   std::stringstream ss;
   ss << "   Analyzed " << total_children << " children\n"
      << "      Total mutation rate: " << total_mutation_rate
@@ -182,8 +206,20 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr) {
      << "      Affected mutation rate: " << affected_mutation_rate
      << " (" << num_mutations_affected << "/" << total_affected << ")\n"
      << "      Unaffected mutation rate: " << unaffected_mutation_rate
-     << " (" << num_mutations_unaffected << "/" << total_unaffected << ")";
+     << " (" << num_mutations_unaffected << "/" << total_unaffected << ")\n"
+     << " P-value: " << p_value;
   PrintMessageDieOnError(ss.str(), M_PROGRESS);
+  // Write output file
+  int32_t start; str_variant.get_INFO_value_single_int(START_KEY, start);
+  int32_t period; str_variant.get_INFO_value_single_int(PERIOD_KEY, period);
+  std::string children_with_mutations_string;
+  join(&children_with_mutations_string, children_with_mutations, ",");
+  locus_summary_ << str_variant.get_chromosome() << "\t"
+		 << start << "\t" << period << "\t"
+		 << total_children << "\t" << num_mutations << "\t" << total_mutation_rate << "\t"
+		 << total_affected << "\t" << num_mutations_affected << "\t" << affected_mutation_rate << "\t"
+		 << total_unaffected << "\t" << num_mutations_unaffected << "\t" << unaffected_mutation_rate << "\t"
+		 << p_value << "\t" << children_with_mutations_string << "\n";
 }
 
 DenovoResult::DenovoResult(const std::string& family_id,

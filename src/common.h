@@ -33,4 +33,8 @@ enum MSGTYPE {
 void PrintMessageDieOnError(const std::string& msg,
                             MSGTYPE msgtype);
 
+void join(std::string* target_string,
+	  const std::vector<std::string>& items,
+	  const std::string& delim);
+
 #endif  // SRC_COMMON_H__

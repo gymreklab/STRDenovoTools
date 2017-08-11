@@ -54,3 +54,16 @@ void PrintMessageDieOnError(const string& msg, MSGTYPE msgtype) {
     exit(1);
   }
 }
+
+void join(std::string* target_string,
+	  const std::vector<std::string>& items,
+	  const std::string& delim) {
+  stringstream ss;
+  for (size_t i = 0; i < items.size(); i++) {
+    ss << items[i];
+    if (i != items.size() - 1) {
+      ss << delim;
+    }
+  }
+  *target_string = ss.str();
+}

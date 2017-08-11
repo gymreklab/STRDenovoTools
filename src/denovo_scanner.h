@@ -23,12 +23,15 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <assert.h>
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <string>
 
 #include "src/options.h"
 #include "src/pedigree.h"
 #include "src/vcf_reader.h"
+
+using namespace std;
 
 class DenovoResult {
  public:
@@ -41,6 +44,7 @@ class DenovoResult {
 
   const int& get_phenotype() const {return phenotype_;}
   const double& get_posterior() const {return posterior_;}
+  const std::string& get_child_id() const {return child_id_;}
   
  private:
   void CalculatePosterior();
@@ -53,18 +57,26 @@ class DenovoResult {
 };
 
 class TrioDenovoScanner {
+ private:
+  static std::string START_KEY, END_KEY, PERIOD_KEY;
+  PedigreeSet pedigree_set_;
+  Options options_;
+  ofstream locus_summary_;
+
  public:
   TrioDenovoScanner(const PedigreeSet& pedigree_set,
 		    const Options& options)
-    : pedigree_set_(pedigree_set), options_(options) {}
+    : pedigree_set_(pedigree_set), options_(options), locus_summary_(options.outprefix + ".locus_summary.tab") {
+    locus_summary_ << "chrom\tpos\tperiod\ttotal_children\ttotal_mutations\ttotal_mutation_rate\t"
+		   << "affected_children\taffected_mutations\taffected_mutation_rate\t"
+		   << "unaffected_children\tunaffected_mutations\tunaffected_mutation_rate\t"
+		   << "p-value\tchildren_with_mutations\n";
+  }
   virtual ~TrioDenovoScanner();
 
   void scan(VCF::VCFReader& strvcf);
-  void summarize_results(std::vector<DenovoResult>& dnr);
- private:
-  static std::string START_KEY, END_KEY;
-  PedigreeSet pedigree_set_;
-  Options options_;
+  void summarize_results(std::vector<DenovoResult>& dnr,
+			 VCF::Variant& str_variant);
 };
 
 
