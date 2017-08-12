@@ -194,7 +194,7 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
     if (dnr_iter->get_posterior() > options_.posterior_threshold) {
       num_mutations++;
       children_with_mutations.push_back(dnr_iter->get_family_id() + ":" + dnr_iter->get_child_id());
-      all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t" << end << "\t"
+      all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t"
 			  << period  << "\t"
 			  << dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
 			  << dnr_iter->get_phenotype() << "\n";
@@ -243,7 +243,7 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
     join(&children_with_mutations_string, children_with_mutations, ",");
   }
   locus_summary_ << str_variant.get_chromosome() << "\t"
-		 << start << "\t" << period << "\t"
+		 << start << "\t" << end << "\t" << period << "\t"
 		 << total_children << "\t" << num_mutations << "\t" << total_mutation_rate << "\t"
 		 << total_affected << "\t" << num_mutations_affected << "\t" << affected_mutation_rate << "\t"
 		 << total_unaffected << "\t" << num_mutations_unaffected << "\t" << unaffected_mutation_rate << "\t"
