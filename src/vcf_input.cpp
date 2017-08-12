@@ -28,6 +28,8 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 const std::string GT_KEY          = "GT";
 const std::string UNPHASED_GL_KEY = "GL";
 const std::string PHASED_GL_KEY   = "PHASEDGL";
+const std::string COVERAGE_KEY    = "DP";
+const std::string SCORE_KEY       = "Q";
 std::string START_INFO_TAG        = "START";
 std::string STOP_INFO_TAG         = "END";
 
@@ -73,15 +75,25 @@ bool read_vcf_alleles(VCF::VCFReader* ref_vcf, const Region& region, std::vector
 
 bool UnphasedGL::build(const VCF::Variant& variant){
   std::vector< std::vector<float> > values;
+  std::vector<int32_t> coverage_values;
+  std::vector<float> score_values;
   variant.get_FORMAT_value_multiple_floats(UNPHASED_GL_KEY, values);
+  variant.get_FORMAT_value_single_int(COVERAGE_KEY, coverage_values);
+  variant.get_FORMAT_value_single_float(SCORE_KEY, score_values);
   num_samples_         = 0;
   num_alleles_         = variant.num_alleles();
   int vcf_sample_index = 0;
 
   const std::vector<std::string>& samples = variant.get_samples();
   for (auto sample_iter = samples.begin(); sample_iter != samples.end(); ++sample_iter, ++vcf_sample_index){
-    if (variant.sample_call_missing(vcf_sample_index))
+    if (variant.sample_call_missing(vcf_sample_index)) {
       continue;
+    }
+    // Apply filters
+    if (coverage_values[vcf_sample_index] < options_.min_coverage ||
+	score_values[vcf_sample_index] < options_.min_score) {
+      continue;
+    }
     unphased_gls_.push_back(values[vcf_sample_index]);
     sample_indices_[*sample_iter] = num_samples_++;
 

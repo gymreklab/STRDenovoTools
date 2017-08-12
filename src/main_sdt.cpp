@@ -48,14 +48,19 @@ void show_help() {
 	   << "\n\nOptions:\n"
 	   << "********* Mutation model ***********************\n"
 	   << "********* Filtering calls **********************\n"
+	   << "--min-coverage <INT>       Discard calls with less than this much coverage\n"
+	   << "--min-score <FLOAT>        Discard calls with less than this score\n"
+	   << "--require-all-children     Discard loci in family where not all children have calls\n" 
 	   << "********* Filtering samples ********************\n"
+	   << "--require-num-children <INT> Require family to have this many children.\n"
 	   << "********* Filtering loci ***********************\n"
-	   << " --region                   Restrict to loci in this region (chrom:start-end). \n"
-	   << " --max-num-alleles          Filter loci with more than this many alleles. \n"
+	   << "--region <STR>             Restrict to loci in this region (chrom:start-end). \n"
+	   << "--period <INT>             Restrict to loci with this motif length.\n"
+	   << "--max-num-alleles <INT>    Filter loci with more than this many alleles. \n"
 	   << "********* Parameters for de novo calling *******\n"
 	   << "--combine-alleles-by-length Collapse alleles of the same length to one. \n"
 	   << "--use-pop-priors            Get genotype priors from population. \n"
-	   << "--posterior-threshold       Cutoff to call something de novo. \n"
+	   << "--posterior-threshold <FLOAT>  Cutoff to call something de novo. \n"
 	   << "********* Other options ************************\n"
 	   << "-h,--help      display this help screen\n"
 	   << "-v,--verbose   print out useful progress messages\n"
@@ -70,9 +75,14 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_FAM,
     OPT_HELP,
     OPT_MAXNUMALLELES,
+    OPT_MINCOVERAGE,
+    OPT_MINSCORE,
     OPT_OUT,
+    OPT_PERIOD,
     OPT_POSTERIORTHRESHOLD,
     OPT_REGION,
+    OPT_REQUIREALLCHILDREN,
+    OPT_REQUIRENUMCHILDREN,
     OPT_STRVCF,
     OPT_USEPOPPRIORS,
     OPT_VERBOSE,
@@ -83,9 +93,14 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"fam", 1, 0, OPT_FAM},
     {"help", 0, 0, OPT_HELP},
     {"max-num-alleles", 1, 0, OPT_MAXNUMALLELES},
+    {"min-coverage", 1, 0, OPT_MINCOVERAGE},
+    {"min-score", 1, 0, OPT_MINSCORE},
     {"out", 1, 0, OPT_OUT},
+    {"period", 1, 0, OPT_PERIOD},
     {"posterior-threshold", 1, 0, OPT_POSTERIORTHRESHOLD},
     {"region", 1, 0, OPT_REGION},
+    {"require-all-children", 0, 0, OPT_REQUIREALLCHILDREN},
+    {"require-num-children", 1, 0, OPT_REQUIRENUMCHILDREN},
     {"strvcf", 1, 0, OPT_STRVCF},
     {"use-pop-priors", 0, 0, OPT_USEPOPPRIORS},
     {"verbose", 0, 0, OPT_VERBOSE},
@@ -110,14 +125,29 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     case OPT_MAXNUMALLELES:
       options->max_num_alleles = atoi(optarg);
       break;
+    case OPT_MINCOVERAGE:
+      options->min_coverage = atoi(optarg);
+      break;
+    case OPT_MINSCORE:
+      options->min_score = atof(optarg);
+      break;
     case OPT_OUT:
       options->outprefix = optarg;
+      break;
+    case OPT_PERIOD:
+      options->period = atoi(optarg);
       break;
     case OPT_POSTERIORTHRESHOLD:
       options->posterior_threshold = atof(optarg);
       break;
     case OPT_REGION:
       options->region = optarg;
+      break;
+    case OPT_REQUIREALLCHILDREN:
+      options->require_all_children++;
+      break;
+    case OPT_REQUIRENUMCHILDREN:
+      options->require_num_children = atoi(optarg);
       break;
     case OPT_STRVCF:
       options->strvcf = optarg;
@@ -180,7 +210,7 @@ int main(int argc, char* argv[]) {
     PrintMessageDieOnError("FAM file " + options.famfile + " does not exist.", M_ERROR);
   }
   PedigreeSet pedigree_set;
-  if (!pedigree_set.ExtractFamilies(options.famfile, str_samples)) {
+  if (!pedigree_set.ExtractFamilies(options.famfile, str_samples, options.require_num_children)) {
     PrintMessageDieOnError("Error extracting families from the pedigree.", M_ERROR);
   }
   pedigree_set.PrintStatus();

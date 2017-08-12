@@ -35,9 +35,18 @@ class Options {
   std::string famfile;
   std::string outprefix;
 
+  // Filtering samples
+  int require_num_children;
+
+  // Filtering calls
+  bool require_all_children;
+  int32_t min_coverage;
+  double min_score;
+
   // Filtering loci
   std::string region;
   int max_num_alleles;
+  int period;
 
   // Options for denovo calling
   bool use_pop_priors;

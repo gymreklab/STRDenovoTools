@@ -71,7 +71,7 @@ class TrioDenovoScanner {
     : pedigree_set_(pedigree_set), options_(options),
     locus_summary_(options.outprefix + ".locus_summary.tab"),
     all_mutations_file_(options.outprefix + ".all_mutations.tab") {
-    locus_summary_ << "chrom\tpos\tperiod\ttotal_children\ttotal_mutations\ttotal_mutation_rate\t"
+    locus_summary_ << "chrom\tpos\tend\tperiod\ttotal_children\ttotal_mutations\ttotal_mutation_rate\t"
 		   << "affected_children\taffected_mutations\taffected_mutation_rate\t"
 		   << "unaffected_children\tunaffected_mutations\tunaffected_mutation_rate\t"
 		   << "p-value\tchildren_with_mutations\n";

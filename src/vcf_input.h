@@ -26,12 +26,15 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <vector>
 
+#include "src/options.h"
 #include "src/region.h"
 #include "src/vcf_reader.h"
 
 extern const std::string GENOTYPE_KEY;
 extern const std::string UNPHASED_GL_KEY;
 extern const std::string PHASED_GL_KEY;
+extern const std::string COVERAGE_KEY;
+extern const std::string SCORE_KEY;
 extern std::string START_INFO_TAG;
 extern std::string STOP_INFO_TAG;
 extern const int32_t pad;
@@ -68,9 +71,11 @@ class UnphasedGL : public GL {
   std::vector< std::vector<float> > max_gls_;
 
   bool build(const VCF::Variant& variant);
+  Options options_;
 
  public:
-  explicit UnphasedGL(const VCF::Variant& variant){
+  explicit UnphasedGL(const VCF::Variant& variant,
+		      const Options& options): options_(options) {
     if (!variant.has_format_field(UNPHASED_GL_KEY))
       PrintMessageDieOnError("Required FORMAT field " + UNPHASED_GL_KEY + " not present in VCF", M_ERROR);
     if (!build(variant))

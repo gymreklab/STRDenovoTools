@@ -58,13 +58,17 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
     // Get locus info
     int32_t start; str_variant.get_INFO_value_single_int(START_KEY, start);
     int32_t end; str_variant.get_INFO_value_single_int(END_KEY, end);
+    int32_t period; str_variant.get_INFO_value_single_int(PERIOD_KEY, period);
+    if (options_.period != 0 && period != options_.period) {
+      continue;
+    }
     std::stringstream ss;
     ss << "Processing STR region " << str_variant.get_chromosome() << ":" << start << "-" << end
        << " with " << num_alleles << " alleles";
     PrintMessageDieOnError(ss.str(), M_PROGRESS);
 
     // Set up
-    UnphasedGL unphased_gls(str_variant);
+    UnphasedGL unphased_gls(str_variant, options_);
     MutationModel mut_model(str_variant);
     DiploidGenotypePrior* dip_gt_priors;
     std::vector<NuclearFamily> families = pedigree_set_.get_families();
@@ -79,8 +83,14 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
     // Scan each family
     for (auto family_iter = families.begin(); family_iter != families.end(); family_iter++) {
       bool scan_for_denovo = unphased_gls.has_sample(family_iter->get_mother()) && unphased_gls.has_sample(family_iter->get_father());
+      if (options_.require_all_children) {
+	for (auto child_iter = family_iter->get_children().begin();
+	     child_iter != family_iter->get_children().end(); child_iter++) {
+	  scan_for_denovo = scan_for_denovo && unphased_gls.has_sample(*child_iter);
+	}
+      }
       // Scan each child in the family
-      for (auto child_iter = family_iter->get_children().begin(); child_iter != family_iter->get_children().end(); ++child_iter) {
+      for (auto child_iter = family_iter->get_children().begin(); child_iter != family_iter->get_children().end(); child_iter++) {
 	if (!scan_for_denovo || !unphased_gls.has_sample(*child_iter)) {
 	  continue;
 	}
@@ -161,8 +171,15 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 
 void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
 					  VCF::Variant& str_variant) {
-  // Get locu sinfo
+  if (dnr.empty()) {
+    stringstream ss;
+    ss << " Skipping - no called children";
+    PrintMessageDieOnError(ss.str(), M_WARNING);
+    return;
+  }
+  // Get locus sinfo
   int32_t start; str_variant.get_INFO_value_single_int(START_KEY, start);
+  int32_t end; str_variant.get_INFO_value_single_int(END_KEY, end);
   int32_t period; str_variant.get_INFO_value_single_int(PERIOD_KEY, period);
   // Get mutation info
   int total_children = 0;
@@ -177,7 +194,8 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
     if (dnr_iter->get_posterior() > options_.posterior_threshold) {
       num_mutations++;
       children_with_mutations.push_back(dnr_iter->get_family_id() + ":" + dnr_iter->get_child_id());
-      all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t" << period  << "\t"
+      all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t" << end << "\t"
+			  << period  << "\t"
 			  << dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
 			  << dnr_iter->get_phenotype() << "\n";
       all_mutations_file_.flush();

@@ -28,10 +28,15 @@ Options::Options() {
   combine_alleles = false;
   use_pop_priors = false;
   verbose = false;
+  require_all_children = false;
+  require_num_children = 0;
 
   max_num_alleles = 25;
   region = "";
   posterior_threshold = 0.9;
+  period = 0;
+  min_coverage = 0;
+  min_score = 0.0;
 }
 
 Options::~Options() {}

@@ -149,6 +149,38 @@ namespace VCF {
       free(info_vals);
     }
 
+    void get_FORMAT_value_single_int(const std::string& fieldname, std::vector<int32_t>& vals) const {
+      vals.clear();
+      int mem = 0;
+      int32_t* format_vals = NULL;
+      int num_entries = bcf_get_format_int32(vcf_header_, vcf_record_, fieldname.c_str(), &format_vals, &mem);
+      if (num_entries < num_samples()) {
+	PrintMessageDieOnError("Failed to extract int FORMAT value from VCF record", M_ERROR);
+      }
+      int32_t* ptr = format_vals;
+      for (int i = 0; i < num_samples(); i++) {
+	vals.push_back(*ptr);
+	ptr += 1;
+      }
+      free(format_vals);
+    }
+
+    void get_FORMAT_value_single_float(const std::string& fieldname, std::vector<float>& vals) const {
+      vals.clear();
+      int mem = 0;
+      float* format_vals = NULL;
+      int num_entries = bcf_get_format_float(vcf_header_, vcf_record_, fieldname.c_str(), &format_vals, &mem);
+      if (num_entries < num_samples()) {
+	PrintMessageDieOnError("Failed to extract int FORMAT value from VCF record", M_ERROR);
+      }
+      float* ptr = format_vals;
+      for (int i = 0; i < num_samples(); i++) {
+	vals.push_back(*ptr);
+	ptr += 1;
+      }
+      free(format_vals);
+    }
+
     void get_FORMAT_value_multiple_floats(const std::string& fieldname, std::vector< std::vector<float> >& vals) const {
       vals.clear();
       int mem            = 0;

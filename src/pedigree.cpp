@@ -29,7 +29,8 @@ using namespace std;
 PedigreeSet::PedigreeSet() {}
 
 bool PedigreeSet::ExtractFamilies(const std::string& famfile,
-				  const std::set<std::string>& samples) {
+				  const std::set<std::string>& samples,
+				  const int& require_num_children) {
   families.clear();
 
   // Read original pedigree
@@ -43,10 +44,15 @@ bool PedigreeSet::ExtractFamilies(const std::string& famfile,
   pedigree.split_into_connected_components(pedigree_components);
   int num_others = 0;
   for (unsigned int i = 0; i < pedigree_components.size(); i++){
-    if (pedigree_components[i]->is_nuclear_family())
-      families.push_back(pedigree_components[i]->convert_to_nuclear_family());
-    else
+    if (pedigree_components[i]->is_nuclear_family()) {
+      NuclearFamily nf = pedigree_components[i]->convert_to_nuclear_family();
+      if (nf.num_children() >= require_num_children) {
+	families.push_back(nf);
+      }
+    }
+    else {
       num_others++;
+    }
     delete pedigree_components[i];
   }
   return true;

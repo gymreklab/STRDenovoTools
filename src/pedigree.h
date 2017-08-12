@@ -68,7 +68,8 @@ class PedigreeSet {
 
   // Load families from .fam file
   bool ExtractFamilies(const std::string& famfile,
-		       const std::set<std::string>& samples);
+		       const std::set<std::string>& samples,
+		       const int& require_num_children);
   // Print summary of loaded families
   void PrintStatus();
 
