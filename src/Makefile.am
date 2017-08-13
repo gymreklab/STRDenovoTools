@@ -21,7 +21,7 @@ NLOP_LIBS = -lnlopt -lm
 AM_CPPFLAGS = -I$(top_srcdir) $(GSL_CFLAGS)
 AM_LDFLAGS = $(GSL_LIBS) $(NLOP_LIBS)
 
-bin_PROGRAMS = STRDenovoTools
+bin_PROGRAMS = STRDenovoTools ExamineDenovo
 noinst_LIBRARIES = libsdt.a
 
 libsdt_a_CPPFLAGS = $(AM_CPPFLAGS)
@@ -44,4 +44,11 @@ STRDenovoTools_CPPFLAGS = $(AM_CPPFLAGS)
 STRDenovoTools_CFLAGS = $(AM_CFLAGS)
 STRDenovoTools_CXXFLAGS = $(AM_CXXFLAGS)
 STRDenovoTools_LDADD = libsdt.a $(GSL_LIBS)
+
+ExamineDenovo_LDFLAGS = $(AM_LDFLAGS) $(HTS_LIBS)
+ExamineDenovo_SOURCES = main_examine.cpp
+ExamineDenovo_CPPFLAGS = $(AM_CPPFLAGS)
+ExamineDenovo_CFLAGS = $(AM_CFLAGS)
+ExamineDenovo_CXXFLAGS = $(AM_CXXFLAGS)
+ExamineDenovo_LDADD = libsdt.a $(GSL_LIBS)
 

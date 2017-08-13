@@ -37,6 +37,9 @@ Options::Options() {
   period = 0;
   min_coverage = 0;
   min_score = 0.0;
+
+  family = "";
+  locus = "";
 }
 
 Options::~Options() {}

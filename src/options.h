@@ -55,6 +55,10 @@ class Options {
 
   // Other options
   bool verbose;
+
+  // Options for ExamineDenovo
+  std::string family;
+  std::string locus;
 };
 
 #endif  // SRC_OPTIONS_H__

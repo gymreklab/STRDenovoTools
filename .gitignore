@@ -1,3 +1,6 @@
+test.*
+nohup.out
+src/ExamineDenovo
 src/STRDenovoTools
 recompile.sh
 old/
