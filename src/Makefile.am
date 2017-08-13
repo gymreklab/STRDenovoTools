@@ -30,6 +30,7 @@ libsdt_a_SOURCES = \
 	denovo_allele_priors.h denovo_allele_priors.cpp \
 	denovo_scanner.h denovo_scanner.cpp \
 	fastonebigheader.h \
+	locus_inspector.h locus_inspector.cpp \
 	mathops.h mathops.cpp \
 	mutation_model.h mutation_model.cpp \
 	options.h options.cpp \

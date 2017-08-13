@@ -28,6 +28,16 @@ using namespace std;
 
 PedigreeSet::PedigreeSet() {}
 
+bool PedigreeSet::GetFamilyIndex(const std::string& familyid, size_t* family_index) {
+  for (size_t i = 0; i < families.size(); i++) {
+    if (families[i].get_family_id() == familyid) {
+      *family_index = i;
+      return true;
+    }
+  }
+  return false;
+}
+
 bool PedigreeSet::ExtractFamilies(const std::string& famfile,
 				  const std::set<std::string>& samples,
 				  const int& require_num_children) {

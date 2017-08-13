@@ -31,6 +31,7 @@ using namespace std;
 
 #include "src/common.h"
 #include "src/denovo_scanner.h"
+#include "src/locus_inspector.h"
 #include "src/options.h"
 #include "src/pedigree.h"
 #include "src/vcf_reader.h"
@@ -154,10 +155,49 @@ int main(int argc, char* argv[]) {
   }
   pedigree_set.PrintStatus();
 
-  // Get info on this locus/family - TODO
+  // Look for this family
+  size_t family_index;
+  if (!pedigree_set.GetFamilyIndex(options.family, &family_index)) {
+    PrintMessageDieOnError("Could not find family " + options.family, M_ERROR);
+  }
+  NuclearFamily myfam = pedigree_set.get_families()[family_index];
+  // Look for the variant
+  strvcf.set_region(options.locus);
+  std::vector<std::string> items;
+  split_by_delim(options.locus, ':', items);
+  if (items.size() != 2) {
+    PrintMessageDieOnError("Invalid locus format", M_ERROR);
+  }
+  std::string chrom = items[0];
+  int32_t start = atoi(items[1].c_str());
+  VCF::Variant str_variant;
+  int32_t str_start;
+  bool found_variant = false;
+  while (strvcf.get_next_variant(str_variant)) {
+    str_variant.get_INFO_value_single_int("START", str_start);
+    if (str_variant.get_chromosome() == chrom && str_start == start) {
+      found_variant = true;
+      break;
+    }
+  }
+  if (!found_variant) {
+    PrintMessageDieOnError("Couldn't find locus in the VCF", M_ERROR);
+  }
+  // Get info on this locus/family
   stringstream ss;
   ss << "Examining locus " << options.locus << " in family " << options.family;
   PrintMessageDieOnError(ss.str(), M_PROGRESS);
-
+  LocusInspector locus_inspector;
+  locus_inspector.Inspect(str_variant, myfam.get_mother(),
+			  strvcf.get_sample_index(myfam.get_mother()), 
+			  "mother", PT_MISSING);
+  locus_inspector.Inspect(str_variant, myfam.get_father(),
+			  strvcf.get_sample_index(myfam.get_father()),
+			  "father", PT_MISSING);
+  for (size_t i = 0; i < myfam.num_children(); i++) {
+    locus_inspector.Inspect(str_variant, myfam.get_children()[i],
+			    strvcf.get_sample_index(myfam.get_children()[i]),
+			    "child", myfam.GetChildrenStatus()[i]);
+  }
   return 0;
 }

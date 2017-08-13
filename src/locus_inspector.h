@@ -17,27 +17,24 @@ You should have received a copy of the GNU General Public License
 along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SRC_COMMON_H__
-#define SRC_COMMON_H__
+#ifndef SRC_LOCUS_INSPECTOR_H__
+#define SRC_LOCUS_INSPECTOR_H__
 
 #include <string>
-#include <vector>
 
-// Print msg, exit if error
-enum MSGTYPE {
-  M_ERROR = 0,
-  M_WARNING = 1,
-  M_DEBUG = 2,
-  M_PROGRESS = 3
+#include "src/vcf_reader.h"
+
+using namespace std;
+
+class LocusInspector {
+ public:
+  LocusInspector();
+  virtual ~LocusInspector();
+
+  void Inspect(VCF::Variant& str_variant, const std::string& sample_id, const int& sample_index,
+	       const std::string& label, const int& status);
+ private:
+  int GetAlleleCount(VCF::Variant& str_variant, int allele);
 };
-void PrintMessageDieOnError(const std::string& msg,
-                            MSGTYPE msgtype);
 
-void join(std::string* target_string,
-	  const std::vector<std::string>& items,
-	  const std::string& delim);
-
-void split_by_delim(const std::string &s, char delim, 
-		    std::vector<std::string>& substrings);
-
-#endif  // SRC_COMMON_H__
+#endif  // SRC_LOCUS_INSPECTOR_H__

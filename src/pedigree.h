@@ -66,6 +66,9 @@ class PedigreeSet {
   PedigreeSet();
   virtual ~PedigreeSet();
 
+  // Get family with this ID
+  bool GetFamilyIndex(const std::string& familyid, size_t* family_index);
+
   // Load families from .fam file
   bool ExtractFamilies(const std::string& famfile,
 		       const std::set<std::string>& samples,
