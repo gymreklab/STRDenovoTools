@@ -22,6 +22,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <string>
 
+#include "src/pedigree.h"
 #include "src/vcf_reader.h"
 
 using namespace std;
@@ -32,9 +33,13 @@ class LocusInspector {
   virtual ~LocusInspector();
 
   void Inspect(VCF::Variant& str_variant, const std::string& sample_id, const int& sample_index,
+	       std::vector<NuclearFamily> families,
 	       const std::string& label, const int& status);
  private:
   int GetAlleleCount(VCF::Variant& str_variant, int allele);
+  void GetAlleleCountByPhenotype(VCF::Variant& variant, std::vector<NuclearFamily> families,
+				 int allele,
+				 int* count_control, int* count_case, int* count_unknown);
 };
 
 #endif  // SRC_LOCUS_INSPECTOR_H__

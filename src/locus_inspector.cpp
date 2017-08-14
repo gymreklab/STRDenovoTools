@@ -24,6 +24,62 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 LocusInspector::LocusInspector() {}
 
+void LocusInspector::GetAlleleCountByPhenotype(VCF::Variant& variant, std::vector<NuclearFamily> families,
+					       int allele,
+					       int* count_control, int* count_case, int* count_unknown) {
+  *count_control = 0;
+  *count_case = 0;
+  *count_unknown = 0;
+  for (auto niter = families.begin(); niter != families.end(); niter++) {
+    std::string mother = (*niter).get_mother();
+    std::string father = (*niter).get_father();
+    int m_gt_a, m_gt_b, f_gt_a, f_gt_b;
+    variant.get_genotype(mother, m_gt_a, m_gt_b);
+    variant.get_genotype(father, f_gt_a, f_gt_b);
+    if (m_gt_a == allele) {
+      (*count_unknown)++;
+    }
+    if (m_gt_b == allele) {
+      (*count_unknown)++;
+    }
+    if (f_gt_a == allele) {
+      (*count_unknown)++;
+    }
+    if (f_gt_b == allele) {
+      (*count_unknown)++;
+    }
+    for (size_t i = 0; i < (*niter).num_children(); i++) {
+      int c_gt_a, c_gt_b;
+      std:string child = (*niter).get_children()[i];
+      int pt = (*niter).GetChildrenStatus()[i];
+      variant.get_genotype(child, c_gt_a, c_gt_b);
+      if (pt == PT_CASE) {
+	if (c_gt_a == allele) {
+	  (*count_case)++;
+	}
+	if (c_gt_b == allele) {
+	  (*count_case)++;
+	}
+      }
+      else if (pt == PT_CONTROL) {
+	if (c_gt_a == allele) {
+	  (*count_control)++;
+	}
+	if (c_gt_b == allele) {
+	  (*count_control)++;
+	}
+      } else {
+	if (c_gt_a == allele) {
+	  (*count_unknown)++;
+	}
+	if (c_gt_b == allele) {
+	  (*count_unknown)++;
+	}
+      }
+    }
+  }
+}
+
 int LocusInspector::GetAlleleCount(VCF::Variant& str_variant, int allele) {
   int count = 0;
   for (int i = 0; i < str_variant.num_samples(); i++) {
@@ -43,6 +99,7 @@ int LocusInspector::GetAlleleCount(VCF::Variant& str_variant, int allele) {
 
 void LocusInspector::Inspect(VCF::Variant& str_variant, const std::string& sample_id,
 			     const int& sample_index,
+			     std::vector<NuclearFamily> families,
 			     const std::string& label, const int& status) {
   stringstream ss;
   ss << "******* " << label << " (" << sample_id << ") " << "Status=" << status << " ******\n";
@@ -61,8 +118,17 @@ void LocusInspector::Inspect(VCF::Variant& str_variant, const std::string& sampl
   allele2 = str_variant.get_alleles()[gt_2];
   int allele1_count = GetAlleleCount(str_variant, gt_1);
   int allele2_count = GetAlleleCount(str_variant, gt_2);
+  int allele1_count_control, allele1_count_case, allele1_count_unknown;
+  int allele2_count_control, allele2_count_case, allele2_count_unknown;
+  GetAlleleCountByPhenotype(str_variant, families, gt_1,
+			    &allele1_count_control, &allele1_count_case, &allele1_count_unknown);
+  GetAlleleCountByPhenotype(str_variant, families, gt_2,
+			    &allele2_count_control, &allele2_count_case, &allele2_count_unknown);
   ss << "GB: " << gb_vals[sample_index] << "\t (GT: " << gt_1 << "|" << gt_2 << ")\t" 
      << "Count: " << allele1_count << ", " << allele2_count << "\n"
+     << "Count by phenotype (ctrl,case,unkown): "
+     << allele1_count_control << "," << allele1_count_case << "," << allele1_count_unknown << "\t"
+     << allele2_count_control << "," << allele2_count_case << "," << allele2_count_unknown << "\n"
      << allele1 << "\t" << allele2 << "\n";
   // Get quality and othe rinfo (Q, DP, ALLREADS, MALLREADS)
   std::vector<std::string> allreads_vals;
