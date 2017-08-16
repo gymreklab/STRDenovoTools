@@ -75,7 +75,7 @@ class TrioDenovoScanner {
 		   << "affected_children\taffected_mutations\taffected_mutation_rate\t"
 		   << "unaffected_children\tunaffected_mutations\tunaffected_mutation_rate\t"
 		   << "p-value\tchildren_with_mutations\n";
-    all_mutations_file_ << "chrom\tpos\tperiod\tfamily\tchild\tphenotype\n";
+    all_mutations_file_ << "chrom\tpos\tperiod\tfamily\tchild\tphenotype\tposterior\n";
   }
   virtual ~TrioDenovoScanner();
 

@@ -54,7 +54,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
     if (str_variant.num_samples() == str_variant.num_missing()) {
       continue;
     }
-    if (num_alleles > options_.max_num_alleles) {
+    if (str_variant.num_alleles() > options_.max_num_alleles) {
       continue;
     }
     
@@ -199,14 +199,14 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   int num_mutations_affected = 0;
   std::vector<std::string>children_with_mutations;
   for (auto dnr_iter = dnr.begin(); dnr_iter != dnr.end(); dnr_iter++) {
+    all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t"
+			<< period  << "\t"
+			<< dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
+			<< dnr_iter->get_phenotype() << "\t" << dnr_iter->get_posterior() << "\n";
     total_children++;
     if (dnr_iter->get_posterior() > options_.posterior_threshold) {
       num_mutations++;
       children_with_mutations.push_back(dnr_iter->get_family_id() + ":" + dnr_iter->get_child_id());
-      all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t"
-			  << period  << "\t"
-			  << dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
-			  << dnr_iter->get_phenotype() << "\n";
       all_mutations_file_.flush();
       if (dnr_iter->get_phenotype() == PT_CONTROL) {
 	num_mutations_unaffected++;
