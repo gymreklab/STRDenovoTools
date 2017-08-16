@@ -17,6 +17,8 @@ You should have received a copy of the GNU General Public License
 along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <set>
+
 #include <sys/stat.h>
 
 #include "vcf_reader.h"
@@ -25,6 +27,14 @@ namespace VCF {
 
   const std::vector<std::string>& Variant::get_samples() const {
     return vcf_reader_->get_samples();
+  }
+
+  int Variant::num_alleles_by_length() const {
+    std::set<int> lengths;
+    for (auto iter=alleles_.begin(); iter!=alleles_.end(); iter++) {
+      lengths.insert((int)iter->size());
+    }
+    return (int)lengths.size();
   }
 
   void Variant::get_genotype(const std::string& sample, int& gt_a, int& gt_b) const {

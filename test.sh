@@ -9,7 +9,8 @@
     --min-coverage 10 \
     --min-score 0.9 \
     --posterior-threshold 0.9 \
-    --out test
+    --out test \
+    --combine-alleles-by-length
 
 #     --region 21:32734150-32734151 \
 #     --period 3 \

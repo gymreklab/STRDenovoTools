@@ -82,6 +82,7 @@ namespace VCF {
     int num_alleles() const { return alleles_.size(); }
     int num_samples() const { return num_samples_;    }
     int num_missing() const { return num_missing_;    }
+    int num_alleles_by_length() const;
 
     bool is_biallelic_snp() const {
       if (vcf_record_ != NULL)

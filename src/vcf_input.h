@@ -44,6 +44,7 @@ bool read_vcf_alleles(VCF::VCFReader* ref_vcf, const Region& region, std::vector
 class GL {
  protected:
   int num_alleles_;
+  int num_seq_alleles_;
   int num_samples_;
   std::map<std::string, int> sample_indices_;
 
@@ -96,6 +97,48 @@ class UnphasedGL : public GL {
   }
 };
 
+class UnphasedLengthGL : public GL {
+ private:
+  std::vector< std::vector<float> > unphased_gls_;
+  std::vector< std::vector<float> > max_gls_;
+  std::map<int, int> gt_to_allele_index_;
+  std::vector<int> allele_sizes_;
+
+  bool build(const VCF::Variant& variant);
+  Options options_;
+
+ public:
+  explicit UnphasedLengthGL(const VCF::Variant& variant,
+			    const Options& options): options_(options) {
+    if (!variant.has_format_field(UNPHASED_GL_KEY))
+      PrintMessageDieOnError("Required FORMAT field " + UNPHASED_GL_KEY + " not present in VCF", M_ERROR);
+    if (!build(variant))
+      PrintMessageDieOnError("Failed to construct UnphasedGL instance from VCF record", M_ERROR);
+  }
+
+  float get_gl(int sample_index, int min_gt, int max_gt) const {
+    assert(min_gt <= max_gt); // Assumes alleles are ordered by length in the first place
+    int min_gt_length = gt_to_allele_index_.at(min_gt);
+    int max_gt_length = gt_to_allele_index_.at(max_gt);
+    return unphased_gls_[sample_index][max_gt_length*(max_gt_length+1)/2 + min_gt_length];
+  }
+
+  /*
+    Convert to new GL field, combining alleles of the same length
+   */
+  void convert_gl_to_length(const std::vector<float>& gl_vals,
+			    const VCF::Variant& variant,
+			    std::vector<float>* gl_by_length);
+
+  /*
+   * For the relevant sample, returns the maximum unphased GL of all genotypes
+   * that contain GT_A as an allele
+   */
+  float get_max_gl_allele_fixed(int sample_index, int gt_a) const {
+    int gt_a_allele = gt_to_allele_index_.at(gt_a);
+    return max_gls_[sample_index][gt_a_allele];
+  }
+};
 
 class PhasedGL : public GL {
  private:

@@ -45,6 +45,9 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
     std::vector<DenovoResult> denovo_results;
     // Initial checks
     int num_alleles = str_variant.num_alleles();
+    if (options_.combine_alleles) {
+      num_alleles = str_variant.num_alleles_by_length();
+    }
     if (num_alleles <= 1) {
       continue;
     }
@@ -64,11 +67,17 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
     }
     std::stringstream ss;
     ss << "Processing STR region " << str_variant.get_chromosome() << ":" << start << "-" << end
-       << " with " << num_alleles << " alleles";
+       << " with " << num_alleles << " alleles.";
+    if (options_.combine_alleles) {
+      ss << " Total allele seqs: " << str_variant.num_alleles();
+    }
     PrintMessageDieOnError(ss.str(), M_PROGRESS);
 
     // Set up
     UnphasedGL unphased_gls(str_variant, options_);
+    if (options_.combine_alleles) {
+      UnphasedLengthGL unphased_gls(str_variant, options_);
+    }
     MutationModel mut_model(str_variant);
     DiploidGenotypePrior* dip_gt_priors;
     std::vector<NuclearFamily> families = pedigree_set_.get_families();
