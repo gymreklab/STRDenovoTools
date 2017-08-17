@@ -10,8 +10,9 @@
     --min-score 0.9 \
     --posterior-threshold 0.9 \
     --out test \
-    --combine-alleles-by-length \
-    --region 21:26502451-26502452
-
+    --combine-alleles-by-length
 #    --region 21:32734150-32734151
 #     --period 3 \
+
+#    --family 14658 \
+#    --region 21:14606632-14606633 \

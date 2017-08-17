@@ -64,6 +64,7 @@ class GL {
   }
 
   virtual float get_gl(int sample_index, int gt_a, int gt_b) const = 0;
+  virtual float get_max_gl_allele_fixed(int sample_index, int gt_a) const = 0;
 };
 
 class UnphasedGL : public GL {
@@ -101,8 +102,6 @@ class UnphasedLengthGL : public GL {
  private:
   std::vector< std::vector<float> > unphased_gls_;
   std::vector< std::vector<float> > max_gls_;
-  std::map<int, int> gt_to_allele_index_;
-  std::vector<int> allele_sizes_;
 
   bool build(const VCF::Variant& variant);
   Options options_;
@@ -117,10 +116,8 @@ class UnphasedLengthGL : public GL {
   }
 
   float get_gl(int sample_index, int min_gt, int max_gt) const {
-    assert(min_gt <= max_gt); // Assumes alleles are ordered by length in the first place
-    int min_gt_length = gt_to_allele_index_.at(min_gt);
-    int max_gt_length = gt_to_allele_index_.at(max_gt);
-    return unphased_gls_[sample_index][max_gt_length*(max_gt_length+1)/2 + min_gt_length];
+    assert(min_gt <= max_gt);
+    return unphased_gls_[sample_index][max_gt*(max_gt+1)/2 + min_gt];
   }
 
   /*
@@ -128,6 +125,7 @@ class UnphasedLengthGL : public GL {
    */
   void convert_gl_to_length(const std::vector<float>& gl_vals,
 			    const VCF::Variant& variant,
+			    const std::string& sample,
 			    std::vector<float>* gl_by_length);
 
   /*
@@ -135,8 +133,7 @@ class UnphasedLengthGL : public GL {
    * that contain GT_A as an allele
    */
   float get_max_gl_allele_fixed(int sample_index, int gt_a) const {
-    int gt_a_allele = gt_to_allele_index_.at(gt_a);
-    return max_gls_[sample_index][gt_a_allele];
+    return max_gls_[sample_index][gt_a];
   }
 };
 

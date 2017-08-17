@@ -23,17 +23,23 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 
 #include "src/vcf_reader.h"
+#include "src/options.h"
 
 class MutationModel {
   double log_mut_prior_;
 
  public:
-  explicit MutationModel(const VCF::Variant& str_variant){
-    assert(str_variant.num_alleles() > 1);
+  explicit MutationModel(const VCF::Variant& str_variant, const Options& options){
+    if (options.combine_alleles) {
+      assert(str_variant.num_alleles_by_length() > 1);
+      log_mut_prior_ = -log10(2) - log10(str_variant.num_alleles_by_length()-1);
+    } else {
+      assert(str_variant.num_alleles() > 1);
     
-    // The allele on each haplotype can mutate to N-1 alleles, so assuming a 
-    // uniform prior each mutation has a prior of 1/(2*(N-1))
-    log_mut_prior_ = -log10(2) - log10(str_variant.num_alleles()-1);
+      // The allele on each haplotype can mutate to N-1 alleles, so assuming a 
+      // uniform prior each mutation has a prior of 1/(2*(N-1))
+      log_mut_prior_ = -log10(2) - log10(str_variant.num_alleles()-1);
+    }
   }
 
   /*

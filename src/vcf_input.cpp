@@ -114,6 +114,7 @@ bool UnphasedGL::build(const VCF::Variant& variant){
 
 void UnphasedLengthGL::convert_gl_to_length(const std::vector<float>& gl_vals,
 					    const VCF::Variant& variant,
+					    const std::string& sample,
 					    std::vector<float>* gl_by_length) {
   // Initialize
   gl_by_length->clear();
@@ -122,17 +123,41 @@ void UnphasedLengthGL::convert_gl_to_length(const std::vector<float>& gl_vals,
     gl_by_length->push_back(-DBL_MAX/2);
   }
   // Iterate through GLs, add to appropriate length based GL
+  //  std::cerr << "debugging GL - " << sample << std::endl;
   for (int a1 = 0; a1 < num_seq_alleles_; a1++) {
     for (int a2 = 0; a2 <= a1; a2++) {
-      int a1_length = gt_to_allele_index_.at(a1);
-      int a2_length = gt_to_allele_index_.at(a2);
+      int a1_length = variant.GetLengthIndexFromGT(a1);
+      int a2_length = variant.GetLengthIndexFromGT(a2);
+      if (a2_length > a1_length) { // Always require a1_length is max
+	a1_length = variant.GetLengthIndexFromGT(a2);
+	a2_length = variant.GetLengthIndexFromGT(a1);
+      }
       int oldindex = a1*(a1+1)/2+a2;
       int newindex = a1_length*(a1_length+1)/2 + a2_length;
       float addval = gl_vals[oldindex];
       float currentval = (*gl_by_length)[newindex];
       (*gl_by_length)[newindex] = log_sum_exp(currentval, addval);
+      // TODO remove debug info
+      /*
+      if (sample == "SSC12092") {
+	std::cerr << a1 << "," << a2 << " " << a1_length << "," << a2_length << " " 
+		  << variant.GetSizeFromLengthAllele(a1_length) << "," << variant.GetSizeFromLengthAllele(a2_length) << " " 
+		  << addval << " " << currentval << std::endl;
+		  }*/
     }
   }
+  /*
+  // TODO remove debug info
+  if (sample == "SSC12092") {
+  std::cerr << "Length-based " << std::endl;
+  for (int a1_length = 0; a1_length < num_alleles_; a1_length++) {
+    for (int a2_length = 0; a2_length <= a1_length; a2_length++) {
+      int newindex = a1_length*(a1_length+1)/2 + a2_length;
+      std::cerr << a1_length << "," << a2_length << " " << variant.GetSizeFromLengthAllele(a1_length) << "," << variant.GetSizeFromLengthAllele(a2_length) << " " 
+		<< (*gl_by_length)[newindex] << std::endl;
+    }
+    }
+    }*/
 }
 
 bool UnphasedLengthGL::build(const VCF::Variant& variant){
@@ -147,35 +172,6 @@ bool UnphasedLengthGL::build(const VCF::Variant& variant){
   num_seq_alleles_     = variant.num_alleles();
   int vcf_sample_index = 0;
 
-  // Build map of GT->allele length. Assume alleles ordered by length
-  // Except reference allele, which is always first
-  const std::vector<std::string> alleles = variant.get_alleles();
-  int ref_allele_size = (int) alleles.front().size();
-  allele_sizes_.resize(num_alleles_, 0);
-  allele_sizes_[0] = ref_allele_size;
-  gt_to_allele_index_[0] = 0;
-  int allele_index = 1;
-  int prev_index = 0;
-  int allele_size = (int)alleles[1].size();
-  for (int i = 1; i < alleles.size(); i++) {
-    int len = (int)alleles[i].size();
-    assert(len >= allele_size);
-    if (len > allele_size) {
-      if (len == ref_allele_size) { // If this alleles is ref length
-	allele_size = len;
-	prev_index = allele_index;
-	allele_index = 0;
-      } else if (allele_size == ref_allele_size) { // If previous allele was ref length
-	allele_size = len;
-	allele_index = prev_index + 1;
-      } else {
-	allele_size = len;
-	allele_index++;
-      }
-    }
-    gt_to_allele_index_[i] = allele_index;
-    allele_sizes_[allele_index] = allele_size;
-  }
   const std::vector<std::string>& samples = variant.get_samples();
   for (auto sample_iter = samples.begin(); sample_iter != samples.end(); ++sample_iter, ++vcf_sample_index){
     if (variant.sample_call_missing(vcf_sample_index)) {
@@ -187,7 +183,7 @@ bool UnphasedLengthGL::build(const VCF::Variant& variant){
       continue;
     }
     std::vector<float> gl_by_length;
-    convert_gl_to_length(values[vcf_sample_index], variant, &gl_by_length);
+    convert_gl_to_length(values[vcf_sample_index], variant, (*sample_iter), &gl_by_length);
     unphased_gls_.push_back(gl_by_length);
     sample_indices_[*sample_iter] = num_samples_++;
 

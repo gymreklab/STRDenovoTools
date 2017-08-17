@@ -75,7 +75,7 @@ class PopulationGenotypePrior : public DiploidGenotypePrior {
   void compute_allele_freqs(VCF::Variant& variant, std::vector<NuclearFamily>& families);
 
  public:
-  PopulationGenotypePrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families)
+ PopulationGenotypePrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families)
     : DiploidGenotypePrior(str_variant, families){
     compute_allele_freqs(str_variant, families);
   }
@@ -93,6 +93,36 @@ class UniformGenotypePrior : public DiploidGenotypePrior {
  public:
   UniformGenotypePrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families)
     : DiploidGenotypePrior(str_variant, families){
+    compute_allele_freqs(str_variant, families);
+  }
+};
+
+/*
+ * Same as PopulationGenotypePrior, but based on allele length
+ */
+class PopulationGenotypeLengthPrior : public DiploidGenotypePrior {
+ protected:
+  void compute_allele_freqs(VCF::Variant& variant, std::vector<NuclearFamily>& families);
+
+ public:
+  PopulationGenotypeLengthPrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families)
+    : DiploidGenotypePrior(str_variant, families){
+    num_alleles_ = str_variant.num_alleles_by_length();
+    compute_allele_freqs(str_variant, families);
+  }
+};
+
+/*
+ * Same as UniformGenotypePrior, but based on length
+ */
+class UniformGenotypeLengthPrior : public DiploidGenotypePrior {
+ protected:
+  void compute_allele_freqs(VCF::Variant& variant, std::vector<NuclearFamily>& families);
+
+ public:
+  UniformGenotypeLengthPrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families)
+    : DiploidGenotypePrior(str_variant, families){
+    num_alleles_ = str_variant.num_alleles_by_length();
     compute_allele_freqs(str_variant, families);
   }
 };

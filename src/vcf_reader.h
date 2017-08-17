@@ -53,6 +53,9 @@ namespace VCF {
     void extract_alleles();
     void extract_genotypes();
 
+    std::map<int, int> gt_to_length_index_;
+    std::vector<int> length_allele_sizes_;
+
   public:
     Variant(){
       vcf_header_  = NULL;
@@ -74,6 +77,7 @@ namespace VCF {
       for (int i = 0; i < num_samples_; ++i)
 	if (missing_[i])
 	  ++num_missing_;
+      build_alleles_by_length();
     }
   
     const std::vector<std::string>& get_alleles() const { return alleles_;         }
@@ -83,6 +87,13 @@ namespace VCF {
     int num_samples() const { return num_samples_;    }
     int num_missing() const { return num_missing_;    }
     int num_alleles_by_length() const;
+
+    // Build mapping of original GT index to length based index
+    void build_alleles_by_length();
+    // Convert between standard alleles in VCF to alleles ordered by length
+    int GetLengthIndexFromGT(const int& gt_index) const;
+    // Get length of allele from length-based allele index
+    int GetSizeFromLengthAllele(const int& length_gt_index) const;
 
     bool is_biallelic_snp() const {
       if (vcf_record_ != NULL)

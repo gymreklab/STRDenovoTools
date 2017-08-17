@@ -37,6 +37,46 @@ namespace VCF {
     return (int)lengths.size();
   }
 
+  void Variant::build_alleles_by_length() {
+    // Build map of GT->allele length. Assume alleles ordered by length
+    // Except reference allele, which is always first
+    const std::vector<std::string> alleles = get_alleles();
+    int ref_allele_size = (int) alleles.front().size();
+    length_allele_sizes_.resize(num_alleles_by_length(), 0);
+    length_allele_sizes_[0] = 0; //ref_allele_size;
+    gt_to_length_index_[0] = 0;
+    int allele_index = 1;
+    int prev_index = 0;
+    int allele_size = (int)alleles[1].size();
+    for (int i = 1; i < alleles.size(); i++) {
+      int len = (int)alleles[i].size();
+      assert(len >= allele_size);
+      if (len > allele_size) {
+	if (len == ref_allele_size) { // If this alleles is ref length
+	  allele_size = len;
+	  prev_index = allele_index;
+	  allele_index = 0;
+	} else if (allele_size == ref_allele_size) { // If previous allele was ref length
+	  allele_size = len;
+	  allele_index = prev_index + 1;
+	} else {
+	  allele_size = len;
+	  allele_index++;
+      }
+    }
+      gt_to_length_index_[i] = allele_index;
+      length_allele_sizes_[allele_index] = allele_size - ref_allele_size;
+    }
+  }
+
+  int Variant::GetLengthIndexFromGT(const int& gt_index) const {
+    return gt_to_length_index_.at(gt_index);
+  }
+
+  int Variant::GetSizeFromLengthAllele(const int& length_gt_index) const {
+    return length_allele_sizes_[length_gt_index];
+  }
+
   void Variant::get_genotype(const std::string& sample, int& gt_a, int& gt_b) const {
     int sample_index = vcf_reader_->get_sample_index(sample);
     if (sample_index == -1)

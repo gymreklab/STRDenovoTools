@@ -52,6 +52,7 @@ void show_help() {
 	   << "--min-score <FLOAT>        Discard calls with less than this score\n"
 	   << "--require-all-children     Discard loci in family where not all children have calls\n" 
 	   << "********* Filtering samples ********************\n"
+	   << "--family <STR>             Restrict to analyzing this family\n"
 	   << "--require-num-children <INT> Require family to have this many children.\n"
 	   << "********* Filtering loci ***********************\n"
 	   << "--region <STR>             Restrict to loci in this region (chrom:start-end). \n"
@@ -73,6 +74,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
   enum LONG_OPTIONS {
     OPT_COMBINEALLELES,
     OPT_FAM,
+    OPT_FAMILY,
     OPT_HELP,
     OPT_MAXNUMALLELES,
     OPT_MINCOVERAGE,
@@ -91,6 +93,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
   static struct option long_options[] = {
     {"combine-alleles-by-length", 0, 0, OPT_COMBINEALLELES},
     {"fam", 1, 0, OPT_FAM},
+    {"family", 1, 0, OPT_FAMILY},
     {"help", 0, 0, OPT_HELP},
     {"max-num-alleles", 1, 0, OPT_MAXNUMALLELES},
     {"min-coverage", 1, 0, OPT_MINCOVERAGE},
@@ -118,6 +121,9 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
       break;
     case OPT_FAM:
       options->famfile = optarg;
+      break;
+    case OPT_FAMILY:
+      options->family = optarg;
       break;
     case OPT_HELP:
     case 'h':
