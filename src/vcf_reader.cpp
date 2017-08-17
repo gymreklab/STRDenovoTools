@@ -37,6 +37,53 @@ namespace VCF {
     return (int)lengths.size();
   }
 
+  float Variant::heterozygosity() const {
+    std::vector<double> allele_freqs(num_alleles(), 1.0); // Use a one sample pseudocount
+    double total_count = num_alleles();
+    // Get counts
+    const std::vector<std::string> samples = get_samples();
+    int gt_a, gt_b;
+    for (auto iter = samples.begin(); iter != samples.end(); iter++) {
+      if (sample_call_missing(*iter)) {
+	continue;
+      }
+      get_genotype(*iter, gt_a, gt_b);
+      allele_freqs[gt_a]++;
+      allele_freqs[gt_b]++;
+      total_count += 2;
+    }
+    // Compute heterozygosity
+    double x = 0.0;
+    for (int i = 0; i < allele_freqs.size(); i++) {
+      double p = allele_freqs[i]/total_count;
+      x += p*p;
+    }
+    return 1-x; 
+  }
+
+  float Variant::heterozygosity_by_length() const {
+    std::vector<double> allele_freqs(num_alleles_by_length(), 1.0);
+    double total_count = num_alleles_by_length();
+    const std::vector<std::string> samples = get_samples();
+    int gt_a, gt_b;
+    for (auto iter = samples.begin(); iter != samples.end(); iter++) {
+      if (sample_call_missing(*iter)) {
+	continue;
+      }
+      get_genotype(*iter, gt_a, gt_b);
+      allele_freqs[GetLengthIndexFromGT(gt_a)]++;
+      allele_freqs[GetLengthIndexFromGT(gt_b)]++;
+      total_count += 2;
+    }
+    // Compute heterozygosity
+    double x = 0.0;
+    for (int i = 0; i < allele_freqs.size(); i++) {
+      double p = allele_freqs[i]/total_count;
+      x += p*p;
+    }
+    return 1-x; 
+  }
+
   void Variant::build_alleles_by_length() {
     // Build map of GT->allele length. Assume alleles ordered by length
     // Except reference allele, which is always first

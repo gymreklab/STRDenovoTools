@@ -87,7 +87,9 @@ namespace VCF {
     int num_samples() const { return num_samples_;    }
     int num_missing() const { return num_missing_;    }
     int num_alleles_by_length() const;
-
+    float heterozygosity() const;
+    float heterozygosity_by_length() const;
+    
     // Build mapping of original GT index to length based index
     void build_alleles_by_length();
     // Convert between standard alleles in VCF to alleles ordered by length

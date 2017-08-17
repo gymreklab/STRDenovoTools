@@ -294,6 +294,8 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   }
   locus_summary_ << str_variant.get_chromosome() << "\t"
 		 << start << "\t" << end << "\t" << period << "\t"
+		 << str_variant.num_alleles_by_length() << "\t" << str_variant.num_alleles()  << "\t"
+		 << str_variant.heterozygosity_by_length() << "\t" << str_variant.heterozygosity() << "\t"
 		 << total_children << "\t" << num_mutations << "\t" << total_mutation_rate << "\t"
 		 << total_affected << "\t" << num_mutations_affected << "\t" << affected_mutation_rate << "\t"
 		 << total_unaffected << "\t" << num_mutations_unaffected << "\t" << unaffected_mutation_rate << "\t"
