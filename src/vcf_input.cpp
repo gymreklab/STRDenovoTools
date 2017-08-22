@@ -31,6 +31,8 @@ const std::string UNPHASED_GL_KEY = "GL";
 const std::string PHASED_GL_KEY   = "PHASEDGL";
 const std::string COVERAGE_KEY    = "DP";
 const std::string SCORE_KEY       = "Q";
+const std::string MALLREADS_KEY   = "MALLREADS";
+const std::string GB_KEY          = "GB";
 std::string START_INFO_TAG        = "START";
 std::string STOP_INFO_TAG         = "END";
 
@@ -78,9 +80,13 @@ bool UnphasedGL::build(const VCF::Variant& variant){
   std::vector< std::vector<float> > values;
   std::vector<int32_t> coverage_values;
   std::vector<float> score_values;
+  std::vector<std::string> mallreads_values;
+  std::vector<std::string> gb_values;
   variant.get_FORMAT_value_multiple_floats(UNPHASED_GL_KEY, values);
   variant.get_FORMAT_value_single_int(COVERAGE_KEY, coverage_values);
   variant.get_FORMAT_value_single_float(SCORE_KEY, score_values);
+  variant.get_FORMAT_value_single_string(MALLREADS_KEY, mallreads_values);
+  variant.get_FORMAT_value_single_string(GB_KEY, gb_values);
   num_samples_         = 0;
   num_alleles_         = variant.num_alleles();
   int vcf_sample_index = 0;
@@ -92,7 +98,9 @@ bool UnphasedGL::build(const VCF::Variant& variant){
     }
     // Apply filters
     if (coverage_values[vcf_sample_index] < options_.min_coverage ||
-	score_values[vcf_sample_index] < options_.min_score) {
+	score_values[vcf_sample_index] < options_.min_score || 
+	GetSpanCount(mallreads_values[vcf_sample_index]) < options_.min_span_cov ||
+	GetMinAlleleCount(mallreads_values[vcf_sample_index], gb_values[vcf_sample_index]) < options_.min_supp_reads) {
       continue;
     }
     unphased_gls_.push_back(values[vcf_sample_index]);
@@ -164,9 +172,13 @@ bool UnphasedLengthGL::build(const VCF::Variant& variant){
   std::vector< std::vector<float> > values;
   std::vector<int32_t> coverage_values;
   std::vector<float> score_values;
+  std::vector<std::string> mallreads_values;
+  std::vector<std::string> gb_values;
   variant.get_FORMAT_value_multiple_floats(UNPHASED_GL_KEY, values);
   variant.get_FORMAT_value_single_int(COVERAGE_KEY, coverage_values);
   variant.get_FORMAT_value_single_float(SCORE_KEY, score_values);
+  variant.get_FORMAT_value_single_string(MALLREADS_KEY, mallreads_values);
+  variant.get_FORMAT_value_single_string(GB_KEY, gb_values);
   num_samples_         = 0;
   num_alleles_         = variant.num_alleles_by_length();
   num_seq_alleles_     = variant.num_alleles();
@@ -179,7 +191,9 @@ bool UnphasedLengthGL::build(const VCF::Variant& variant){
     }
     // Apply filters
     if (coverage_values[vcf_sample_index] < options_.min_coverage ||
-	score_values[vcf_sample_index] < options_.min_score) {
+	score_values[vcf_sample_index] < options_.min_score || 
+	GetSpanCount(mallreads_values[vcf_sample_index]) < options_.min_span_cov ||
+	GetMinAlleleCount(mallreads_values[vcf_sample_index], gb_values[vcf_sample_index]) < options_.min_supp_reads) {
       continue;
     }
     std::vector<float> gl_by_length;
@@ -228,4 +242,44 @@ bool PhasedGL::build(const VCF::Variant& variant){
   }
 
   return true;
+}
+
+int GL::GetSpanCount(const std::string& mallreads) {
+  int totalreads = 0;
+  std::vector<std::string> items;
+  split_by_delim(mallreads, ';', items);
+  for (auto iter = items.begin(); iter != items.end(); iter++) {
+    std::vector<std::string> ainfo;
+    split_by_delim((*iter), '|', ainfo);
+    if (ainfo.size() != 2) {
+      return 0;
+    }
+    totalreads += atoi(ainfo[1].c_str());
+  }
+  return totalreads;
+}
+
+int GL::GetMinAlleleCount(const std::string& mallreads, const std::string& gbstring) {
+  std::vector<std::string> alleles;
+  std::vector<std::string> items;
+  split_by_delim(gbstring, '|', alleles);
+  if (alleles.size() != 2) {
+    return 0;
+  }
+  split_by_delim(mallreads, ';', items);
+  int suppreads = INT_MAX;
+  for (auto iter = items.begin(); iter != items.end(); iter++) {
+    std::vector<std::string> ainfo;
+    split_by_delim((*iter), '|', ainfo);
+    if (ainfo.size() != 2) {
+      return 0;
+    }
+    int cov = atoi(ainfo[1].c_str());
+    if (ainfo[0] == alleles[0] || ainfo[0] == alleles[1]) {
+      if (cov < suppreads) {
+	suppreads = cov;
+      }
+    }
+  }
+  return suppreads;
 }

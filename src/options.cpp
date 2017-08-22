@@ -37,6 +37,8 @@ Options::Options() {
   period = 0;
   min_coverage = 0;
   min_score = 0.0;
+  min_span_cov = 0;
+  min_supp_reads = 0;
 
   family = "";
   locus = "";

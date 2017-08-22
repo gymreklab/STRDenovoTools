@@ -35,6 +35,8 @@ extern const std::string UNPHASED_GL_KEY;
 extern const std::string PHASED_GL_KEY;
 extern const std::string COVERAGE_KEY;
 extern const std::string SCORE_KEY;
+extern const std::string MALLREADS_KEY;
+extern const std::string GB_KEY;
 extern std::string START_INFO_TAG;
 extern std::string STOP_INFO_TAG;
 extern const int32_t pad;
@@ -62,6 +64,11 @@ class GL {
     auto sample_iter = sample_indices_.find(sample);
     return (sample_iter == sample_indices_.end() ? -1 : sample_iter->second);
   }
+
+  // Get number of reads spanning the STR
+  int GetSpanCount(const std::string& mallreads);
+  // Get min number of reads supporting a called allele
+  int GetMinAlleleCount(const std::string& mallreads, const std::string& gbstring);
 
   virtual float get_gl(int sample_index, int gt_a, int gt_b) const = 0;
   virtual float get_max_gl_allele_fixed(int sample_index, int gt_a) const = 0;

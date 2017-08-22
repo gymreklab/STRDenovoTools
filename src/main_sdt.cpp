@@ -49,7 +49,9 @@ void show_help() {
 	   << "********* Mutation model ***********************\n"
 	   << "********* Filtering calls **********************\n"
 	   << "--min-coverage <INT>       Discard calls with less than this much coverage\n"
+	   << "--min-span-coverage <INT>  Discard calls with less than this many spanning reads\n"
 	   << "--min-score <FLOAT>        Discard calls with less than this score\n"
+	   << "--min-supp-reads <INT>     Discard calls with an allele supported by less than this many reads\n"
 	   << "--require-all-children     Discard loci in family where not all children have calls\n" 
 	   << "********* Filtering samples ********************\n"
 	   << "--family <STR>             Restrict to analyzing this family\n"
@@ -79,6 +81,8 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_MAXNUMALLELES,
     OPT_MINCOVERAGE,
     OPT_MINSCORE,
+    OPT_MINSPANCOV,
+    OPT_MINSUPPREADS,
     OPT_OUT,
     OPT_PERIOD,
     OPT_POSTERIORTHRESHOLD,
@@ -98,6 +102,8 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"max-num-alleles", 1, 0, OPT_MAXNUMALLELES},
     {"min-coverage", 1, 0, OPT_MINCOVERAGE},
     {"min-score", 1, 0, OPT_MINSCORE},
+    {"min-span-coverage", 1, 0, OPT_MINSPANCOV},
+    {"min-supp-reads", 1, 0, OPT_MINSUPPREADS},
     {"out", 1, 0, OPT_OUT},
     {"period", 1, 0, OPT_PERIOD},
     {"posterior-threshold", 1, 0, OPT_POSTERIORTHRESHOLD},
@@ -136,6 +142,12 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
       break;
     case OPT_MINSCORE:
       options->min_score = atof(optarg);
+      break;
+    case OPT_MINSPANCOV:
+      options->min_span_cov = atoi(optarg);
+      break;
+    case OPT_MINSUPPREADS:
+      options->min_supp_reads = atoi(optarg);
       break;
     case OPT_OUT:
       options->outprefix = optarg;

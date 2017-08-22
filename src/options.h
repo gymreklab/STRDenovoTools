@@ -42,6 +42,8 @@ class Options {
   bool require_all_children;
   int32_t min_coverage;
   double min_score;
+  int32_t min_span_cov;
+  int32_t min_supp_reads;
 
   // Filtering loci
   std::string region;

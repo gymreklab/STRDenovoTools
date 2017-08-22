@@ -317,12 +317,12 @@ DenovoResult::DenovoResult(const std::string& family_id,
 }
 
 void DenovoResult::CalculatePosterior() {
-  double mutation_rate = 0.00001;
-  double log_prior_mutation = log10(mutation_rate); // TODO change. and check if log10 vs. log?
+  double mutation_rate = 0.0001; // TODO change
+  double log_prior_mutation = log10(mutation_rate); // TODO change
   double log_prior_nomut = log10(1-mutation_rate);
-  double denom = fast_log_sum_exp(total_ll_one_denovo_+log_prior_mutation,
-				  total_ll_no_mutation_+log_prior_nomut);
-  double posterior = exp(total_ll_one_denovo_+log_prior_mutation - denom);
+  double denom = fast_log_sum_exp((total_ll_one_denovo_+log_prior_mutation)*log(10),
+				  (total_ll_no_mutation_+log_prior_nomut)*log(10))/log(10); // Converts denom to log10
+  double posterior = pow(10, total_ll_one_denovo_+log_prior_mutation - denom);
   posterior_ = posterior;
 }
 
