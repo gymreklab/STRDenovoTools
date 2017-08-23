@@ -37,6 +37,7 @@ std::string TrioDenovoScanner::PERIOD_KEY  = "PERIOD";
 
 TrioDenovoScanner::~TrioDenovoScanner() {
   locus_summary_.close();
+  all_mutations_file_.close();
 }
 
 void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
@@ -210,7 +211,8 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 	double total_ll_one_denovo  = finish_streaming_log_sum_exp(ll_one_denovo_max,  ll_one_denovo_total);
 	
 	// Add to results
-	DenovoResult dnr(family_iter->get_family_id(), (*child_iter), family_iter->get_child_phenotype(*child_iter),
+	DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(),
+			 (*child_iter), family_iter->get_child_phenotype(*child_iter),
 			 total_ll_no_mutation, total_ll_one_denovo);
 	denovo_results.push_back(dnr);
       }
@@ -219,6 +221,40 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
   }
 }
 
+/*
+  Try to determine the de novo allele and how big the step size was
+  If we can't figure it out, return "NA" for new_allele and mut_size
+ */
+void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::string& mother_id,
+					const std::string& father_id, const std::string& child_id,
+					std::string* new_allele, std::string* mut_size) {
+  int gt_mother_a, gt_mother_b, gt_father_a, gt_father_b, gt_child_a, gt_child_b;
+  *new_allele = "NA";
+  *mut_size = "NA";
+  variant.get_genotype(mother_id, gt_mother_a, gt_mother_b);
+  variant.get_genotype(father_id, gt_father_a, gt_father_b);
+  variant.get_genotype(child_id, gt_child_a, gt_child_b);
+  // Case 1: Mendelian - skip
+  if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) &&
+      (gt_child_b == gt_father_b || gt_child_b == gt_father_b)) {
+    return;
+  }
+  if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) && 
+      (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
+    return;
+  }
+  // Case 2: New allele from father
+  // Allele a in mother only, allele b not in either
+  if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) &&
+      (gt_child_a != gt_father_a && gt_child_a != gt_father_a) &&
+      (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b &&
+       gt_child_b != gt_father_a && gt_child_b != gt_father_b)) {
+    // TODO came from father. Decide which allele and size
+  }
+  // Allele b in mother only, allele a not in either - TODO
+  // Case 3: New allele from mother - TODO
+  // Case 4: Not clear, pick closest allele that is not equal - TODO
+}
 void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
 					  VCF::Variant& str_variant) {
   if (dnr.empty()) {
@@ -240,14 +276,19 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   int num_mutations_affected = 0;
   std::vector<std::string>children_with_mutations;
   for (auto dnr_iter = dnr.begin(); dnr_iter != dnr.end(); dnr_iter++) {
-    all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t"
-			<< period  << "\t"
-			<< dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
-			<< dnr_iter->get_phenotype() << "\t" << dnr_iter->get_posterior() << "\n";
     total_children++;
     if (dnr_iter->get_posterior() > options_.posterior_threshold) {
       num_mutations++;
       children_with_mutations.push_back(dnr_iter->get_family_id() + ":" + dnr_iter->get_child_id());
+      std::string new_allele, mut_size;
+      GetMutationInfo(str_variant, dnr_iter->get_mother_id(), dnr_iter->get_father_id(),
+		      dnr_iter->get_child_id(), &new_allele, &mut_size);
+      all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t"
+			  << period  << "\t"
+			  << dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
+			  << dnr_iter->get_phenotype() << "\t" << dnr_iter->get_posterior()
+			  << new_allele << "\t" << mut_size
+			  << "\n";
       all_mutations_file_.flush();
       if (dnr_iter->get_phenotype() == PT_CONTROL) {
 	num_mutations_unaffected++;
@@ -304,11 +345,15 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
 }
 
 DenovoResult::DenovoResult(const std::string& family_id,
+			   const std::string& mother_id,
+			   const std::string& father_id,
 			   const std::string& child_id,
 			   const int& phenotype,
 			   const double& total_ll_no_mutation,
 			   const double& total_ll_one_denovo) {
   family_id_ = family_id;
+  mother_id_ = mother_id;
+  father_id_ = father_id;
   child_id_ = child_id;
   phenotype_ = phenotype;
   total_ll_no_mutation_ = total_ll_no_mutation;

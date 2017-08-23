@@ -268,6 +268,8 @@ int GL::GetMinAlleleCount(const std::string& mallreads, const std::string& gbstr
   }
   split_by_delim(mallreads, ';', items);
   int suppreads = INT_MAX;
+  bool found_a0 = false;
+  bool found_a1 = false;
   for (auto iter = items.begin(); iter != items.end(); iter++) {
     std::vector<std::string> ainfo;
     split_by_delim((*iter), '|', ainfo);
@@ -275,11 +277,21 @@ int GL::GetMinAlleleCount(const std::string& mallreads, const std::string& gbstr
       return 0;
     }
     int cov = atoi(ainfo[1].c_str());
+    if (ainfo[0] == alleles[0]) {
+      found_a0 = true;
+    }
+    if (ainfo[0] == alleles[1]) {
+      found_a1 = true;
+    }
     if (ainfo[0] == alleles[0] || ainfo[0] == alleles[1]) {
       if (cov < suppreads) {
 	suppreads = cov;
       }
     }
   }
+  if (!found_a0 or !found_a1) {
+    suppreads = 0;
+  }
+  std::cerr << mallreads << " " << gbstring << " " << suppreads << std::endl;
   return suppreads;
 }

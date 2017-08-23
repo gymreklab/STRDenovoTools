@@ -36,6 +36,8 @@ using namespace std;
 class DenovoResult {
  public:
   DenovoResult(const std::string& family_id,
+	       const std::string& mother_id,
+	       const std::string& father_id,
 	       const std::string& child_id,
 	       const int& phenotype,
 	       const double& total_ll_no_mutation,
@@ -45,11 +47,15 @@ class DenovoResult {
   const int& get_phenotype() const {return phenotype_;}
   const double& get_posterior() const {return posterior_;}
   const std::string& get_child_id() const {return child_id_;}
+  const std::string& get_mother_id() const {return mother_id_;}
+  const std::string& get_father_id() const {return father_id_;}
   const std::string& get_family_id() const {return family_id_;}
   
  private:
   void CalculatePosterior();
   std::string family_id_;
+  std::string mother_id_;
+  std::string father_id_;
   std::string child_id_;
   int phenotype_;
   double total_ll_no_mutation_;
@@ -77,13 +83,17 @@ class TrioDenovoScanner {
 		   << "affected_children\taffected_mutations\taffected_mutation_rate\t"
 		   << "unaffected_children\tunaffected_mutations\tunaffected_mutation_rate\t"
 		   << "p-value\tchildren_with_mutations\n";
-    all_mutations_file_ << "chrom\tpos\tperiod\tfamily\tchild\tphenotype\tposterior\n";
+    all_mutations_file_ << "chrom\tpos\tperiod\tfamily\tchild\tphenotype\tposterior\tnewallele\tmutsize\n";
   }
   virtual ~TrioDenovoScanner();
 
   void scan(VCF::VCFReader& strvcf);
   void summarize_results(std::vector<DenovoResult>& dnr,
 			 VCF::Variant& str_variant);
+  void GetMutationInfo(const VCF::Variant& variant, const std::string& mother_id,
+		       const std::string& father_id, const std::string& child_id,
+		       std::string* new_allele, std::string* mut_size);
+		       
 };
 
 
