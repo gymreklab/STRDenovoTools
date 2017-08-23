@@ -292,6 +292,5 @@ int GL::GetMinAlleleCount(const std::string& mallreads, const std::string& gbstr
   if (!found_a0 or !found_a1) {
     suppreads = 0;
   }
-  std::cerr << mallreads << " " << gbstring << " " << suppreads << std::endl;
   return suppreads;
 }
