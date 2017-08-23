@@ -146,17 +146,17 @@ void UnphasedLengthGL::convert_gl_to_length(const std::vector<float>& gl_vals,
       float currentval = (*gl_by_length)[newindex];
       (*gl_by_length)[newindex] = log_sum_exp(currentval, addval);
       // TODO remove debug info
-      /*
-      if (sample == "SSC12092") {
+      /*if (sample == "SSC10003") {
 	std::cerr << a1 << "," << a2 << " " << a1_length << "," << a2_length << " " 
 		  << variant.GetSizeFromLengthAllele(a1_length) << "," << variant.GetSizeFromLengthAllele(a2_length) << " " 
 		  << addval << " " << currentval << std::endl;
 		  }*/
     }
   }
-  /*
+
   // TODO remove debug info
-  if (sample == "SSC12092") {
+  /*
+  if (sample == "SSC10003") {
   std::cerr << "Length-based " << std::endl;
   for (int a1_length = 0; a1_length < num_alleles_; a1_length++) {
     for (int a2_length = 0; a2_length <= a1_length; a2_length++) {

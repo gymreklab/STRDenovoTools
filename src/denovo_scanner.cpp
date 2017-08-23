@@ -125,8 +125,9 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 	int father_gl_index       = unphased_gls->get_sample_index(family_iter->get_father());
 	int child_gl_index        = unphased_gls->get_sample_index(*child_iter);
 
-	/*
+	
 	// TODO remove debug info
+	/*
 	std::cerr << "GL info for " << family_iter->get_family_id() << std::endl;
 	std::cerr << "# Mother " << family_iter->get_mother() << std::endl;
 	for (int mat_i = 0; mat_i < num_alleles; mat_i++) {
@@ -229,6 +230,7 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
 					const std::string& father_id, const std::string& child_id,
 					std::string* new_allele, std::string* mut_size) {
   int gt_mother_a, gt_mother_b, gt_father_a, gt_father_b, gt_child_a, gt_child_b;
+  int ref_allele_size = (int)variant.get_allele(0).size();
   *new_allele = "NA";
   *mut_size = "NA";
   variant.get_genotype(mother_id, gt_mother_a, gt_mother_b);
@@ -246,15 +248,108 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
   // Case 2: New allele from father
   // Allele a in mother only, allele b not in either
   if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) &&
-      (gt_child_a != gt_father_a && gt_child_a != gt_father_a) &&
+      (gt_child_a != gt_father_a && gt_child_a != gt_father_b) &&
       (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b &&
        gt_child_b != gt_father_a && gt_child_b != gt_father_b)) {
-    // TODO came from father. Decide which allele and size
+    *new_allele = std::to_string((int)variant.get_allele(gt_child_b).size()-ref_allele_size);
+    int diff1 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_a).size();
+    int diff2 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_b).size();
+    if (abs(diff1) < abs(diff2)) {
+      *mut_size = std::to_string(diff1);
+    } else {
+      *mut_size = std::to_string(diff2);
+    }
+    return;
   }
-  // Allele b in mother only, allele a not in either - TODO
-  // Case 3: New allele from mother - TODO
-  // Case 4: Not clear, pick closest allele that is not equal - TODO
+  // Allele b in mother only, allele a not in either
+  if ((gt_child_b == gt_mother_a || gt_child_b == gt_mother_b) &&
+      (gt_child_b != gt_father_a && gt_child_b != gt_father_b) &&
+      (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b &&
+       gt_child_a != gt_father_a && gt_child_a != gt_father_b)) {
+    *new_allele = std::to_string((int)variant.get_allele(gt_child_a).size()-ref_allele_size);
+    int diff1 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_a).size();
+    int diff2 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_b).size();
+    if (abs(diff1) < abs(diff2)) {
+      *mut_size = std::to_string(diff1);
+    } else {
+      *mut_size = std::to_string(diff2);
+    }
+    return;
+  }
+  // Case 3: New allele from mother
+  // Allele a in father only, allele b not in either
+  if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) &&
+      (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b) &&
+      (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b &&
+       gt_child_b != gt_father_a && gt_child_b != gt_father_b)) {
+    *new_allele = std::to_string((int)variant.get_allele(gt_child_b).size()-ref_allele_size);
+    int diff1 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_a).size();
+    int diff2 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_b).size();
+    if (abs(diff1) < abs(diff2)) {
+      *mut_size = std::to_string(diff1);
+    } else {
+      *mut_size = std::to_string(diff2);
+    }
+    return;
+  }
+  // Allele b in father only, allele a not in either
+  if ((gt_child_b == gt_father_a || gt_child_b == gt_father_b) &&
+      (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b) &&
+      (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b &&
+       gt_child_a != gt_father_a && gt_child_a != gt_father_b)) {
+    *new_allele = std::to_string((int)variant.get_allele(gt_child_a).size()-ref_allele_size);
+    int diff1 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_a).size();
+    int diff2 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_b).size();
+    if (abs(diff1) < abs(diff2)) {
+      *mut_size = std::to_string(diff1);
+    } else {
+      *mut_size = std::to_string(diff2);
+    }
+    return;
+  }
+  // Case 4: Not clear, pick closest allele that is not equal
+  if (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b &&
+      gt_child_a != gt_father_a && gt_child_a != gt_father_b) {
+    *new_allele = std::to_string((int)variant.get_allele(gt_child_a).size()-ref_allele_size);
+    int diff1 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_a).size();
+    int diff2 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_b).size();
+    int diff3 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_a).size();
+    int diff4 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_b).size();
+    int min_size = std::min(std::min(abs(diff1), abs(diff2)), std::min(abs(diff3), abs(diff4)));
+    if (min_size == abs(diff1)) {
+      *mut_size = std::to_string(diff1);
+    } else if (min_size == abs(diff2)) {
+      *mut_size = std::to_string(diff2);
+    } else if (min_size == abs(diff3)) {
+      *mut_size = std::to_string(diff3);
+    } else {
+      *mut_size = std::to_string(diff4);
+    }
+    return;
+  }
+  if (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b &&
+      gt_child_b != gt_father_a && gt_child_b != gt_father_b) {
+    *new_allele = std::to_string((int)variant.get_allele(gt_child_b).size()-ref_allele_size);
+    int diff1 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_a).size();
+    int diff2 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_b).size();
+    int diff3 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_a).size();
+    int diff4 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_b).size();
+    int min_size = std::min(std::min(abs(diff1), abs(diff2)), std::min(abs(diff3), abs(diff4)));
+    if (min_size == abs(diff1)) {
+      *mut_size = std::to_string(diff1);
+    } else if (min_size == abs(diff2)) {
+      *mut_size = std::to_string(diff2);
+    } else if (min_size == abs(diff3)) {
+      *mut_size = std::to_string(diff3);
+    } else {
+      *mut_size = std::to_string(diff4);
+    }
+    return;
+  }
+  // Case 5: new allele found in one of the parents. Ignore for now
+  // e.g. mother=0|0, father=10|4, child=0|0
 }
+
 void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
 					  VCF::Variant& str_variant) {
   if (dnr.empty()) {
@@ -282,11 +377,11 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
       children_with_mutations.push_back(dnr_iter->get_family_id() + ":" + dnr_iter->get_child_id());
       std::string new_allele, mut_size;
       GetMutationInfo(str_variant, dnr_iter->get_mother_id(), dnr_iter->get_father_id(),
-		      dnr_iter->get_child_id(), &new_allele, &mut_size);
+      		      dnr_iter->get_child_id(), &new_allele, &mut_size);
       all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t"
 			  << period  << "\t"
 			  << dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
-			  << dnr_iter->get_phenotype() << "\t" << dnr_iter->get_posterior()
+			  << dnr_iter->get_phenotype() << "\t" << dnr_iter->get_posterior() << "\t"
 			  << new_allele << "\t" << mut_size
 			  << "\n";
       all_mutations_file_.flush();

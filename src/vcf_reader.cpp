@@ -85,35 +85,50 @@ namespace VCF {
   }
 
   void Variant::build_alleles_by_length() {
+    //    std::cerr << "building allele length map " << std::endl;
     // Build map of GT->allele length. Assume alleles ordered by length
     // Except reference allele, which is always first
     const std::vector<std::string> alleles = get_alleles();
     int ref_allele_size = (int) alleles.front().size();
     length_allele_sizes_.resize(num_alleles_by_length(), 0);
-    length_allele_sizes_[0] = 0; //ref_allele_size;
+    // First element is always ref allele
+    length_allele_sizes_[0] = 0;
     gt_to_length_index_[0] = 0;
-    int allele_index = 1;
-    int prev_index = 0;
+    int max_index = 0;
+    // Go through rest of alleles
     int allele_size = (int)alleles[1].size();
+    int allele_index = 1;
+    if (allele_size == ref_allele_size) {
+      allele_index = 0;
+    }
+    int prev_index = 0; // Only gets set when we encounter ref allele
     for (int i = 1; i < alleles.size(); i++) {
       int len = (int)alleles[i].size();
-      assert(len >= allele_size);
-      if (len > allele_size) {
-	if (len == ref_allele_size) { // If this alleles is ref length
-	  allele_size = len;
+      assert(len >= allele_size); // Assume alleles ordered by length
+      if (len == ref_allele_size) { // If this alleles is ref length, keep track of prev index
+	allele_size = len;
+	if (allele_index != 0) {
 	  prev_index = allele_index;
-	  allele_index = 0;
-	} else if (allele_size == ref_allele_size) { // If previous allele was ref length
-	  allele_size = len;
-	  allele_index = prev_index + 1;
-	} else {
-	  allele_size = len;
-	  allele_index++;
+	}
+	allele_index = 0;
+      } else if (allele_size == ref_allele_size) { // If previous allele was ref length, continue indexing where we left off
+	allele_size = len;
+	allele_index = prev_index + 1;
+      } else if (len == allele_size) {
+	allele_size = len;
+      } else {
+	allele_size = len;
+	allele_index++;
       }
-    }
       gt_to_length_index_[i] = allele_index;
       length_allele_sizes_[allele_index] = allele_size - ref_allele_size;
+      if (allele_index > max_index) {
+	max_index = allele_index;
+      }
+      //std::cerr << "length map " << i << " " << allele_index << " " << allele_size-ref_allele_size << " " << (len==ref_allele_size) << std::endl;
     }
+    //    std::cerr << "done building allele length map " << max_index << " " << num_alleles_by_length() << std::endl;
+    assert(max_index == num_alleles_by_length()-1);
   }
 
   int Variant::GetLengthIndexFromGT(const int& gt_index) const {
