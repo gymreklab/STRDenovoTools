@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ./src/STRDenovoTools \
-    --strvcf /storage/s1saini/hipstr_genomewide/chr22/hipstr_calls_22.vcf.gz \
+    --strvcf /storage/s1saini/hipstr_genomewide/chr20/hipstr_calls_20.vcf.gz \
     --fam /home/mgymrek/workspace/ssc-imputation/denovos/pedigree.fam \
     --max-num-alleles 25 \
     --require-all-children \
@@ -12,7 +12,8 @@
     --out test \
     --combine-alleles-by-length \
     --min-span-cov 10 \
-    --min-supp-reads 2 
+    --min-supp-reads 2 \
+    --region 20:52477355-52477366
 #    --region 22:17631413-17631426
 #    --region 22:39350442-39350443 \
 #    --family 13924
