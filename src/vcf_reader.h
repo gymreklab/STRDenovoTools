@@ -192,6 +192,7 @@ namespace VCF {
 	vals.push_back(*ptr);
 	ptr += 1;
       }
+      free(format_vals[0]);
       free(format_vals);
     }
 

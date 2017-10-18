@@ -121,6 +121,7 @@ class UnphasedLengthGL : public GL {
     if (!build(variant))
       PrintMessageDieOnError("Failed to construct UnphasedGL instance from VCF record", M_ERROR);
   }
+  ~UnphasedLengthGL();
 
   float get_gl(int sample_index, int min_gt, int max_gt) const {
     assert(min_gt <= max_gt);

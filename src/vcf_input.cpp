@@ -183,8 +183,8 @@ bool UnphasedLengthGL::build(const VCF::Variant& variant){
   num_alleles_         = variant.num_alleles_by_length();
   num_seq_alleles_     = variant.num_alleles();
   int vcf_sample_index = 0;
-
   const std::vector<std::string>& samples = variant.get_samples();
+
   for (auto sample_iter = samples.begin(); sample_iter != samples.end(); ++sample_iter, ++vcf_sample_index){
     if (variant.sample_call_missing(vcf_sample_index)) {
       continue;
@@ -199,7 +199,7 @@ bool UnphasedLengthGL::build(const VCF::Variant& variant){
     std::vector<float> gl_by_length;
     convert_gl_to_length(values[vcf_sample_index], variant, (*sample_iter), &gl_by_length);
     unphased_gls_.push_back(gl_by_length);
-    sample_indices_[*sample_iter] = num_samples_++;
+    sample_indices_[*sample_iter] = num_samples_;
 
     std::vector<float> max_allele_gl(num_alleles_, -DBL_MAX/2);
     int gl_index = 0;
@@ -210,10 +210,13 @@ bool UnphasedLengthGL::build(const VCF::Variant& variant){
       }
     }
     max_gls_.push_back(max_allele_gl);
+    num_samples_++;
   }
 
   return true;
 }
+
+UnphasedLengthGL::~UnphasedLengthGL() {}
 
 bool PhasedGL::build(const VCF::Variant& variant){
   std::vector< std::vector<float> > values;

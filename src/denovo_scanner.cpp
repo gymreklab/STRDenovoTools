@@ -76,18 +76,22 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 
     // Set up
     GL* unphased_gls;
+    UnphasedLengthGL unphased_length_gls(str_variant, options_);
+    UnphasedGL unphased_seq_gls(str_variant, options_);
     MutationModel mut_model(str_variant, options_);
     DiploidGenotypePrior* dip_gt_priors;
     std::vector<NuclearFamily> families = pedigree_set_.get_families();
     if (options_.combine_alleles) {
-      unphased_gls = new UnphasedLengthGL(str_variant, options_);
+      //unphased_gls = new UnphasedLengthGL(str_variant, options_);
+      unphased_gls = &unphased_length_gls;
       if (options_.use_pop_priors) {
 	dip_gt_priors = new PopulationGenotypeLengthPrior(str_variant, families);
       } else {
 	dip_gt_priors = new UniformGenotypeLengthPrior(str_variant, families);
       }
     } else {
-      unphased_gls = new UnphasedGL(str_variant, options_);
+      //unphased_gls = new UnphasedGL(str_variant, options_);
+      unphased_gls = &unphased_seq_gls;
       if (options_.use_pop_priors) {
 	dip_gt_priors = new PopulationGenotypePrior(str_variant, families);
       } else {
@@ -219,6 +223,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
       }
     }
     summarize_results(denovo_results, str_variant);
+    delete dip_gt_priors;
   }
 }
 
