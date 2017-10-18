@@ -41,6 +41,7 @@ std::string STOP_INFO_TAG         = "END";
 // we look for entries a window around the locus. The size of this window is controlled by this parameter
 const int32_t pad = 50;
 
+/*
 bool read_vcf_alleles(VCF::VCFReader* ref_vcf, const Region& region, std::vector<std::string>& alleles, int32_t& pos){
   assert(alleles.size() == 0 && ref_vcf != NULL);
   int32_t pad_start = (region.start() < pad ? 0 : region.start()-pad);
@@ -75,6 +76,7 @@ bool read_vcf_alleles(VCF::VCFReader* ref_vcf, const Region& region, std::vector
   pos = -1;
   return false;
 }
+*/
 
 bool UnphasedGL::build(const VCF::Variant& variant){
   std::vector< std::vector<float> > values;

@@ -173,7 +173,7 @@ int main(int argc, char* argv[]) {
   VCF::Variant str_variant;
   int32_t str_start;
   bool found_variant = false;
-  while (strvcf.get_next_variant(str_variant)) {
+  while (strvcf.get_next_variant(&str_variant)) {
     str_variant.get_INFO_value_single_int("START", str_start);
     if (str_variant.get_chromosome() == chrom && str_start == start) {
       found_variant = true;

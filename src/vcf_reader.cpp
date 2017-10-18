@@ -242,16 +242,19 @@ namespace VCF {
     }
   }
 
-  bool VCFReader::get_next_variant(Variant& variant){
+  bool VCFReader::get_next_variant(Variant* variant){
+    vcf_record_ = bcf_init(); // need to destroy after variant goes out of scope
     if ((tbx_iter_ != NULL) && tbx_itr_next(vcf_input_, tbx_input_, tbx_iter_, &vcf_line_) >= 0){
       if (vcf_parse(&vcf_line_, vcf_header_, vcf_record_) < 0)
 	PrintMessageDieOnError("Failed to parse VCF record", M_ERROR);
-      variant = Variant(vcf_header_, vcf_record_, this);
+      *variant = Variant(vcf_header_, vcf_record_, this);
       return true;
     }
   
-    if (jumped_)
+    if (jumped_) {
+      bcf_destroy(vcf_record_);
       return false;
+    }
   
     while (chrom_index_+1 < chroms_.size()){
       chrom_index_++;
@@ -261,10 +264,11 @@ namespace VCF {
       if ((tbx_iter_ != NULL) && tbx_itr_next(vcf_input_, tbx_input_, tbx_iter_, &vcf_line_) >= 0){
 	if (vcf_parse(&vcf_line_, vcf_header_, vcf_record_) < 0)
 	  PrintMessageDieOnError("Failed to parse VCF record", M_ERROR);
-	variant = Variant(vcf_header_, vcf_record_, this);
+	*variant = Variant(vcf_header_, vcf_record_, this);
 	return true;
       }
     }
+    bcf_destroy(vcf_record_);
     return false;
   }
 

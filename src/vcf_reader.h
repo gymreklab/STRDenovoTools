@@ -79,7 +79,7 @@ namespace VCF {
 	  ++num_missing_;
       build_alleles_by_length();
     }
-  
+    
     const std::vector<std::string>& get_alleles() const { return alleles_;         }
     const std::string& get_allele(int allele)     const { return alleles_[allele]; }
     const std::vector<std::string>& get_samples() const;
@@ -97,6 +97,7 @@ namespace VCF {
     // Get length of allele from length-based allele index
     int GetSizeFromLengthAllele(const int& length_gt_index) const;
 
+    void destroy_record() {bcf_destroy(vcf_record_);}
     bool is_biallelic_snp() const {
       if (vcf_record_ != NULL)
 	return (vcf_record_->n_allele == 2) && bcf_is_snp(vcf_record_);
@@ -281,7 +282,8 @@ namespace VCF {
       vcf_line_.l = 0;
       vcf_line_.m = 0;
       vcf_line_.s = NULL;
-      vcf_record_ = bcf_init();
+      vcf_record_ = NULL;
+      //      vcf_record_ = bcf_init();
       open(filename);
     }
 
@@ -291,7 +293,7 @@ namespace VCF {
       if (tbx_iter_   != NULL)   tbx_itr_destroy(tbx_iter_);
       if (tbx_input_  != NULL)   tbx_destroy(tbx_input_);
       if (vcf_line_.s != NULL)   free(vcf_line_.s);
-      bcf_destroy(vcf_record_);
+      //bcf_destroy(vcf_record_);
     }
 
     bool has_sample(const std::string& sample) const {
@@ -326,7 +328,7 @@ namespace VCF {
 
     const std::vector<std::string>& get_samples() const { return samples_; }
 
-    bool get_next_variant(Variant& variant);
+    bool get_next_variant(Variant* variant);
   };
 
 }

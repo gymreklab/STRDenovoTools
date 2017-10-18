@@ -42,28 +42,33 @@ TrioDenovoScanner::~TrioDenovoScanner() {
 
 void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
   VCF::Variant str_variant;
-  while (strvcf.get_next_variant(str_variant)) {
-    std::vector<DenovoResult> denovo_results;
+  std::vector<NuclearFamily> families = pedigree_set_.get_families();
+  std::vector<DenovoResult> denovo_results;
+  while (strvcf.get_next_variant(&str_variant)) {
+    denovo_results.clear();
     // Initial checks
     int num_alleles = str_variant.num_alleles();
     if (options_.combine_alleles) {
       num_alleles = str_variant.num_alleles_by_length();
     }
     if (num_alleles <= 1) {
+      str_variant.destroy_record();
       continue;
     }
     if (str_variant.num_samples() == str_variant.num_missing()) {
+      str_variant.destroy_record();
       continue;
     }
     if (str_variant.num_alleles() > options_.max_num_alleles) {
+      str_variant.destroy_record();
       continue;
     }
-    
     // Get locus info
     int32_t start; str_variant.get_INFO_value_single_int(START_KEY, start);
     int32_t end; str_variant.get_INFO_value_single_int(END_KEY, end);
     int32_t period; str_variant.get_INFO_value_single_int(PERIOD_KEY, period);
     if (options_.period != 0 && period != options_.period) {
+      str_variant.destroy_record();
       continue;
     }
     std::stringstream ss;
@@ -80,7 +85,6 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
     UnphasedGL unphased_seq_gls(str_variant, options_);
     MutationModel mut_model(str_variant, options_);
     DiploidGenotypePrior* dip_gt_priors;
-    std::vector<NuclearFamily> families = pedigree_set_.get_families();
     if (options_.combine_alleles) {
       //unphased_gls = new UnphasedLengthGL(str_variant, options_);
       unphased_gls = &unphased_length_gls;
@@ -224,6 +228,10 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
     }
     summarize_results(denovo_results, str_variant);
     delete dip_gt_priors;
+    denovo_results.clear();
+    
+    // Destroy vcf_record_ from variant
+    str_variant.destroy_record();
   }
 }
 
