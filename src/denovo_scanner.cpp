@@ -241,7 +241,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
  */
 void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::string& mother_id,
 					const std::string& father_id, const std::string& child_id,
-					std::string* new_allele, std::string* mut_size) {
+					std::string* new_allele, std::string* mut_size, bool* new_allele_in_parents) {
   int gt_mother_a, gt_mother_b, gt_father_a, gt_father_b, gt_child_a, gt_child_b;
   int ref_allele_size = (int)variant.get_allele(0).size();
   *new_allele = "NA";
@@ -252,10 +252,12 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
   // Case 1: Mendelian - skip
   if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) &&
       (gt_child_b == gt_father_b || gt_child_b == gt_father_b)) {
+    *new_allele_in_parents = true;
     return;
   }
   if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) && 
       (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
+    *new_allele_in_parents = true;
     return;
   }
   // Case 2: New allele from father
@@ -385,19 +387,22 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   std::vector<std::string>children_with_mutations;
   for (auto dnr_iter = dnr.begin(); dnr_iter != dnr.end(); dnr_iter++) {
     total_children++;
-    if (dnr_iter->get_posterior() > options_.posterior_threshold) {
-      num_mutations++;
-      children_with_mutations.push_back(dnr_iter->get_family_id() + ":" + dnr_iter->get_child_id());
-      std::string new_allele, mut_size;
-      GetMutationInfo(str_variant, dnr_iter->get_mother_id(), dnr_iter->get_father_id(),
-      		      dnr_iter->get_child_id(), &new_allele, &mut_size);
+    std::string new_allele, mut_size;
+    bool new_allele_in_parents = false;
+    GetMutationInfo(str_variant, dnr_iter->get_mother_id(), dnr_iter->get_father_id(),
+		    dnr_iter->get_child_id(), &new_allele, &mut_size, &new_allele_in_parents);
+    if (dnr_iter->get_posterior() > options_.posterior_threshold || options_.outputall) {
       all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t"
 			  << period  << "\t"
 			  << dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
 			  << dnr_iter->get_phenotype() << "\t" << dnr_iter->get_posterior() << "\t"
-			  << new_allele << "\t" << mut_size
+			  << new_allele << "\t" << mut_size << "\t" << new_allele_in_parents
 			  << "\n";
       all_mutations_file_.flush();
+    }
+    if (dnr_iter->get_posterior() > options_.posterior_threshold) {
+      num_mutations++;
+      children_with_mutations.push_back(dnr_iter->get_family_id() + ":" + dnr_iter->get_child_id());
       if (dnr_iter->get_phenotype() == PT_CONTROL) {
 	num_mutations_unaffected++;
       }

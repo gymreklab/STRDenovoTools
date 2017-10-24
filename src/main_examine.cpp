@@ -202,5 +202,6 @@ int main(int argc, char* argv[]) {
 			    pedigree_set.get_families(),
 			    "child", myfam.GetChildrenStatus()[i]);
   }
+  str_variant.destroy_record();
   return 0;
 }

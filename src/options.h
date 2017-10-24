@@ -58,6 +58,9 @@ class Options {
   // Other options
   bool verbose;
 
+  // Options for output
+  bool outputall;
+  
   // Options for ExamineDenovo
   std::string family;
   std::string locus;

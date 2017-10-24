@@ -25,6 +25,7 @@ Options::Options() {
   strvcf = "";
   famfile = "";
   outprefix = "";
+  outputall = false;
   combine_alleles = false;
   use_pop_priors = false;
   verbose = false;

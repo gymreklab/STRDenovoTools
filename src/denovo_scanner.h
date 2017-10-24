@@ -83,7 +83,7 @@ class TrioDenovoScanner {
 		   << "affected_children\taffected_mutations\taffected_mutation_rate\t"
 		   << "unaffected_children\tunaffected_mutations\tunaffected_mutation_rate\t"
 		   << "p-value\tchildren_with_mutations\n";
-    all_mutations_file_ << "chrom\tpos\tperiod\tfamily\tchild\tphenotype\tposterior\tnewallele\tmutsize\n";
+    all_mutations_file_ << "chrom\tpos\tperiod\tfamily\tchild\tphenotype\tposterior\tnewallele\tmutsize\tinparents\n";
   }
   virtual ~TrioDenovoScanner();
 
@@ -92,7 +92,7 @@ class TrioDenovoScanner {
 			 VCF::Variant& str_variant);
   void GetMutationInfo(const VCF::Variant& variant, const std::string& mother_id,
 		       const std::string& father_id, const std::string& child_id,
-		       std::string* new_allele, std::string* mut_size);
+		       std::string* new_allele, std::string* mut_size, bool* new_allele_in_parents);
 		       
 };
 

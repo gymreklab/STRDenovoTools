@@ -13,7 +13,8 @@
     --combine-alleles-by-length \
     --min-span-cov 10 \
     --min-supp-reads 2 \
-    --region 20:52477355-52477366
+    --region 20:52477355-52477366 \
+    --output-all-loci
 #    --region 22:17631413-17631426
 #    --region 22:39350442-39350443 \
 #    --family 13924

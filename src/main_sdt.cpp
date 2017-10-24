@@ -64,6 +64,8 @@ void show_help() {
 	   << "--combine-alleles-by-length Collapse alleles of the same length to one. \n"
 	   << "--use-pop-priors            Get genotype priors from population. \n"
 	   << "--posterior-threshold <FLOAT>  Cutoff to call something de novo. \n"
+	   << "********* Filtering loci ***********************\n"
+	   << "--output-all-loci           Output all loci to mutations file regardless of score.\n"
 	   << "********* Other options ************************\n"
 	   << "-h,--help      display this help screen\n"
 	   << "-v,--verbose   print out useful progress messages\n"
@@ -84,6 +86,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_MINSPANCOV,
     OPT_MINSUPPREADS,
     OPT_OUT,
+    OPT_OUTPUTALL,
     OPT_PERIOD,
     OPT_POSTERIORTHRESHOLD,
     OPT_REGION,
@@ -105,6 +108,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"min-span-coverage", 1, 0, OPT_MINSPANCOV},
     {"min-supp-reads", 1, 0, OPT_MINSUPPREADS},
     {"out", 1, 0, OPT_OUT},
+    {"output-all-loci", 0, 0, OPT_OUTPUTALL},
     {"period", 1, 0, OPT_PERIOD},
     {"posterior-threshold", 1, 0, OPT_POSTERIORTHRESHOLD},
     {"region", 1, 0, OPT_REGION},
@@ -151,6 +155,9 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
       break;
     case OPT_OUT:
       options->outprefix = optarg;
+      break;
+    case OPT_OUTPUTALL:
+      options->outputall++;
       break;
     case OPT_PERIOD:
       options->period = atoi(optarg);
