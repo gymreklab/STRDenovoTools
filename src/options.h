@@ -34,6 +34,7 @@ class Options {
   std::string strvcf;
   std::string famfile;
   std::string outprefix;
+  std::string priors_file;
 
   // Filtering samples
   int require_num_children;
@@ -64,6 +65,12 @@ class Options {
   // Options for ExamineDenovo
   std::string family;
   std::string locus;
+
+  // Mutation model
+  double default_prior;
+  double default_beta;
+  double default_pgeom;
+  int default_central;
 };
 
 #endif  // SRC_OPTIONS_H__

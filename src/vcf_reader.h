@@ -54,8 +54,7 @@ namespace VCF {
     void extract_genotypes();
 
     std::map<int, int> gt_to_length_index_;
-    std::vector<int> length_allele_sizes_;
-
+    std::vector<int> length_allele_sizes_; 
   public:
     Variant(){
       vcf_header_  = NULL;
@@ -94,7 +93,7 @@ namespace VCF {
     void build_alleles_by_length();
     // Convert between standard alleles in VCF to alleles ordered by length
     int GetLengthIndexFromGT(const int& gt_index) const;
-    // Get length of allele from length-based allele index
+    // Get length of allele from length-based allele index (absolute length, in bp)
     int GetSizeFromLengthAllele(const int& length_gt_index) const;
 
     void destroy_record() {bcf_destroy(vcf_record_);}

@@ -1,8 +1,12 @@
 #!/bin/bash
 
+chrom=8
+
 ./src/STRDenovoTools \
-    --strvcf /storage/s1saini/hipstr_genomewide/chr20/hipstr_calls_20.vcf.gz \
+    --strvcf /storage/s1saini/hipstr_rerun/chr${chrom}/hipstr.chr${chrom}.with.1kg.vcf.gz \
     --fam /home/mgymrek/workspace/ssc-imputation/denovos/pedigree.fam \
+    --mutation-models /storage/mgymrek/ssc-denovos/mutea-results/predicted_str_mutrates_GRCh37.bed \
+    --default-prior -5.0 \
     --max-num-alleles 25 \
     --require-all-children \
     --require-num-children 2 \
@@ -13,8 +17,9 @@
     --combine-alleles-by-length \
     --min-span-cov 10 \
     --min-supp-reads 2 \
-    --region 20:52477355-52477366 \
+    --region ${chrom}:125907115-125907115 \
     --output-all-loci
+# 20:52477355-52477366 \
 #    --region 22:17631413-17631426
 #    --region 22:39350442-39350443 \
 #    --family 13924

@@ -40,7 +40,8 @@ TrioDenovoScanner::~TrioDenovoScanner() {
   all_mutations_file_.close();
 }
 
-void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
+void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
+			     MutationPriors& priors) {
   VCF::Variant str_variant;
   std::vector<NuclearFamily> families = pedigree_set_.get_families();
   std::vector<DenovoResult> denovo_results;
@@ -59,7 +60,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
       str_variant.destroy_record();
       continue;
     }
-    if (str_variant.num_alleles() > options_.max_num_alleles) {
+    if (num_alleles > options_.max_num_alleles) {
       str_variant.destroy_record();
       continue;
     }
@@ -83,7 +84,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
     GL* unphased_gls;
     UnphasedLengthGL unphased_length_gls(str_variant, options_);
     UnphasedGL unphased_seq_gls(str_variant, options_);
-    MutationModel mut_model(str_variant, options_);
+    MutationModel mut_model(str_variant, priors, options_);
     DiploidGenotypePrior* dip_gt_priors;
     if (options_.combine_alleles) {
       //unphased_gls = new UnphasedLengthGL(str_variant, options_);
@@ -102,6 +103,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 	dip_gt_priors = new UniformGenotypePrior(str_variant, families);
       }
     }
+    double prior_rate = priors.GetPrior(str_variant.get_chromosome(), start);
     const double LOG_ONE_FOURTH = -log10(4);
     const double LOG_TWO        = log10(2);
 
@@ -133,37 +135,6 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 	int father_gl_index       = unphased_gls->get_sample_index(family_iter->get_father());
 	int child_gl_index        = unphased_gls->get_sample_index(*child_iter);
 
-	
-	// TODO remove debug info
-	/*
-	std::cerr << "GL info for " << family_iter->get_family_id() << std::endl;
-	std::cerr << "# Mother " << family_iter->get_mother() << std::endl;
-	for (int mat_i = 0; mat_i < num_alleles; mat_i++) {
-	  for (int mat_j = 0; mat_j <= mat_i; mat_j++) {
-	    std::cerr << mat_i << " " << mat_j << " "
-		      << str_variant.GetSizeFromLengthAllele(mat_i) << " " << str_variant.GetSizeFromLengthAllele(mat_j)
-		      << " " << unphased_gls->get_gl(mother_gl_index, mat_j, mat_i) << std::endl;
-	  }
-	}
-	std::cerr << "# Father " << family_iter->get_father() << std::endl;
-	for (int pat_i = 0; pat_i < num_alleles; pat_i++) {
-	  for (int pat_j = 0; pat_j <= pat_i; pat_j++) {
-	    std::cerr << pat_i << " " << pat_j << " "
-		      << str_variant.GetSizeFromLengthAllele(pat_i) << " " << str_variant.GetSizeFromLengthAllele(pat_j)
-		      << " " << unphased_gls->get_gl(father_gl_index, pat_j, pat_i) << std::endl;
-	  }
-	}
-	std::cerr << "# Child " << (*child_iter) << std::endl;
-	for (int c_i = 0; c_i < num_alleles; c_i++) {
-	  for (int c_j = 0; c_j <= c_i; c_j++) {
-	    std::cerr << c_i << " " << c_j << " "
-		      << str_variant.GetSizeFromLengthAllele(c_i) << " " << str_variant.GetSizeFromLengthAllele(c_j)
-		      << " " << unphased_gls->get_gl(child_gl_index, c_j, c_i) << std::endl;
-	  }
-	  }*/
-
-
-
 	// Iterate over all maternal genotypes
 	for (int mat_i = 0; mat_i < num_alleles; mat_i++){
 	  for (int mat_j = 0; mat_j <= mat_i; mat_j++){
@@ -185,26 +156,30 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 		    update_streaming_log_sum_exp(no_mutation_config_ll, ll_no_mutation_max, ll_no_mutation_total);
 
 		    // All putative mutations to the maternal allele
-		    double max_ll_mat_mut = config_ll + unphased_gls->get_max_gl_allele_fixed(child_gl_index, pat_allele) + mut_model.max_log_prior_mutation(mat_allele);
+		    double max_ll_mat_mut = config_ll + unphased_gls->get_max_gl_allele_fixed(child_gl_index, pat_allele) + 
+		      mut_model.max_log_prior_mutation(str_variant.GetSizeFromLengthAllele(mat_allele));
 		    if (max_ll_mat_mut > ll_one_denovo_max-MIN_CONTRIBUTION){
 		      for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++){
 			if (mut_allele == mat_allele)
 			  continue;
-			double prob = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mut_allele, pat_allele), \
+			double prob = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mut_allele, pat_allele), 
 								      std::max(mut_allele, pat_allele))
-			  + mut_model.log_prior_mutation(mat_allele, mut_allele);
+			  + mut_model.log_prior_mutation(str_variant.GetSizeFromLengthAllele(mat_allele),
+							 str_variant.GetSizeFromLengthAllele(mut_allele));
 			update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
 		      }
 		    }
 
 		    // All putative mutations to the paternal allele
-		    double max_ll_pat_mut = config_ll + unphased_gls->get_max_gl_allele_fixed(child_gl_index, mat_allele) + mut_model.max_log_prior_mutation(pat_allele);
+		    double max_ll_pat_mut = config_ll + unphased_gls->get_max_gl_allele_fixed(child_gl_index, mat_allele) + 
+		      mut_model.max_log_prior_mutation(str_variant.GetSizeFromLengthAllele(pat_allele));
 		    if (max_ll_pat_mut > ll_one_denovo_max - MIN_CONTRIBUTION){
 		      for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++){
 			if (mut_allele == pat_allele)
 			  continue;
 			double prob = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mat_allele, mut_allele), std::max(mat_allele, mut_allele))
-			  + mut_model.log_prior_mutation(pat_allele, mut_allele);
+			  + mut_model.log_prior_mutation(str_variant.GetSizeFromLengthAllele(pat_allele),
+							 str_variant.GetSizeFromLengthAllele(mut_allele));
 			update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
 		      }
 		    }
@@ -222,7 +197,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
 	// Add to results
 	DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(),
 			 (*child_iter), family_iter->get_child_phenotype(*child_iter),
-			 total_ll_no_mutation, total_ll_one_denovo);
+			 total_ll_no_mutation, total_ll_one_denovo, prior_rate);
 	denovo_results.push_back(dnr);
       }
     }
@@ -241,31 +216,34 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf) {
  */
 void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::string& mother_id,
 					const std::string& father_id, const std::string& child_id,
-					std::string* new_allele, std::string* mut_size, bool* new_allele_in_parents) {
+					std::string* new_allele, std::string* mut_size,
+					bool* new_allele_in_parents, int* poocase) {
   int gt_mother_a, gt_mother_b, gt_father_a, gt_father_b, gt_child_a, gt_child_b;
   int ref_allele_size = (int)variant.get_allele(0).size();
   *new_allele = "NA";
   *mut_size = "NA";
+  *poocase = -1;
   variant.get_genotype(mother_id, gt_mother_a, gt_mother_b);
   variant.get_genotype(father_id, gt_father_a, gt_father_b);
   variant.get_genotype(child_id, gt_child_a, gt_child_b);
   // Case 1: Mendelian - skip
   if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) &&
-      (gt_child_b == gt_father_b || gt_child_b == gt_father_b)) {
+      (gt_child_b == gt_father_a || gt_child_b == gt_father_b)) {
     *new_allele_in_parents = true;
+    *poocase = 1;
     return;
   }
   if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) && 
       (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
     *new_allele_in_parents = true;
+    *poocase = 1;
     return;
   }
   // Case 2: New allele from father
-  // Allele a in mother only, allele b not in either
+  // Allele a in mother only, allele b not in father
   if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) &&
       (gt_child_a != gt_father_a && gt_child_a != gt_father_b) &&
-      (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b &&
-       gt_child_b != gt_father_a && gt_child_b != gt_father_b)) {
+      (gt_child_b != gt_father_a && gt_child_b != gt_father_b)) {
     *new_allele = std::to_string((int)variant.get_allele(gt_child_b).size()-ref_allele_size);
     int diff1 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_a).size();
     int diff2 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_b).size();
@@ -274,13 +252,13 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
     } else {
       *mut_size = std::to_string(diff2);
     }
+    *poocase = 2;
     return;
   }
-  // Allele b in mother only, allele a not in either
+  // Allele b in mother only, allele a not in father
   if ((gt_child_b == gt_mother_a || gt_child_b == gt_mother_b) &&
       (gt_child_b != gt_father_a && gt_child_b != gt_father_b) &&
-      (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b &&
-       gt_child_a != gt_father_a && gt_child_a != gt_father_b)) {
+      gt_child_a != gt_father_a && gt_child_a != gt_father_b) {
     *new_allele = std::to_string((int)variant.get_allele(gt_child_a).size()-ref_allele_size);
     int diff1 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_a).size();
     int diff2 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_b).size();
@@ -289,14 +267,14 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
     } else {
       *mut_size = std::to_string(diff2);
     }
+    *poocase = 21;
     return;
   }
   // Case 3: New allele from mother
-  // Allele a in father only, allele b not in either
+  // Allele a in father only, allele b not in mother
   if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) &&
       (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b) &&
-      (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b &&
-       gt_child_b != gt_father_a && gt_child_b != gt_father_b)) {
+      (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b)) {
     *new_allele = std::to_string((int)variant.get_allele(gt_child_b).size()-ref_allele_size);
     int diff1 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_a).size();
     int diff2 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_b).size();
@@ -305,13 +283,13 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
     } else {
       *mut_size = std::to_string(diff2);
     }
+    *poocase = 3;
     return;
   }
-  // Allele b in father only, allele a not in either
+  // Allele b in father only, allele a not in mother
   if ((gt_child_b == gt_father_a || gt_child_b == gt_father_b) &&
       (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b) &&
-      (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b &&
-       gt_child_a != gt_father_a && gt_child_a != gt_father_b)) {
+      (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b)) {
     *new_allele = std::to_string((int)variant.get_allele(gt_child_a).size()-ref_allele_size);
     int diff1 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_a).size();
     int diff2 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_b).size();
@@ -320,6 +298,7 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
     } else {
       *mut_size = std::to_string(diff2);
     }
+    *poocase = 31;
     return;
   }
   // Case 4: Not clear, pick closest allele that is not equal
@@ -340,6 +319,7 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
     } else {
       *mut_size = std::to_string(diff4);
     }
+    *poocase = 4;
     return;
   }
   if (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b &&
@@ -359,10 +339,11 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
     } else {
       *mut_size = std::to_string(diff4);
     }
+    *poocase = 41;
     return;
   }
-  // Case 5: new allele found in one of the parents. Ignore for now
-  // e.g. mother=0|0, father=10|4, child=0|0
+  *poocase = 5;
+  return;
 }
 
 void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
@@ -389,14 +370,17 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
     total_children++;
     std::string new_allele, mut_size;
     bool new_allele_in_parents = false;
+    int poocase;
     GetMutationInfo(str_variant, dnr_iter->get_mother_id(), dnr_iter->get_father_id(),
-		    dnr_iter->get_child_id(), &new_allele, &mut_size, &new_allele_in_parents);
+		    dnr_iter->get_child_id(), &new_allele, &mut_size,
+		    &new_allele_in_parents, &poocase);
     if (dnr_iter->get_posterior() > options_.posterior_threshold || options_.outputall) {
       all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t"
-			  << period  << "\t"
+			  << period  << "\t" << pow(10, dnr_iter->get_prior()) << "\t"
 			  << dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
 			  << dnr_iter->get_phenotype() << "\t" << dnr_iter->get_posterior() << "\t"
-			  << new_allele << "\t" << mut_size << "\t" << new_allele_in_parents
+			  << new_allele << "\t" << mut_size << "\t"
+			  << new_allele_in_parents << "\t" << poocase
 			  << "\n";
       all_mutations_file_.flush();
     }
@@ -463,7 +447,8 @@ DenovoResult::DenovoResult(const std::string& family_id,
 			   const std::string& child_id,
 			   const int& phenotype,
 			   const double& total_ll_no_mutation,
-			   const double& total_ll_one_denovo) {
+			   const double& total_ll_one_denovo,
+			   const double& log10prior) {
   family_id_ = family_id;
   mother_id_ = mother_id;
   father_id_ = father_id;
@@ -471,16 +456,16 @@ DenovoResult::DenovoResult(const std::string& family_id,
   phenotype_ = phenotype;
   total_ll_no_mutation_ = total_ll_no_mutation;
   total_ll_one_denovo_ = total_ll_one_denovo;
+  log10_prior_mutation_ = log10prior;
   CalculatePosterior();
 }
 
 void DenovoResult::CalculatePosterior() {
-  double mutation_rate = 0.0001; // TODO change
-  double log_prior_mutation = log10(mutation_rate); // TODO change
-  double log_prior_nomut = log10(1-mutation_rate);
-  double denom = fast_log_sum_exp((total_ll_one_denovo_+log_prior_mutation)*log(10),
-				  (total_ll_no_mutation_+log_prior_nomut)*log(10))/log(10); // Converts denom to log10
-  double posterior = pow(10, total_ll_one_denovo_+log_prior_mutation - denom);
+  double log10_prior_nomut = log10(1-pow(10, log10_prior_mutation_));
+  // Note, all likelihoods in log10, but fast_log_sum_exp assumes log_e
+  double denom = fast_log_sum_exp((total_ll_one_denovo_+log10_prior_mutation_)*log(10),
+				  (total_ll_no_mutation_+log10_prior_nomut)*log(10))*log10(exp(1)); // Converts denom to log10
+  double posterior = pow(10, total_ll_one_denovo_+log10_prior_mutation_ - denom);
   posterior_ = posterior;
 }
 

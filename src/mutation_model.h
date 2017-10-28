@@ -22,37 +22,30 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <math.h>
 
-#include "src/vcf_reader.h"
+#include "src/mutation_priors.h"
 #include "src/options.h"
+#include "src/vcf_reader.h"
 
 class MutationModel {
-  double log_mut_prior_;
-
- public:
-  explicit MutationModel(const VCF::Variant& str_variant, const Options& options){
-    if (options.combine_alleles) {
-      assert(str_variant.num_alleles_by_length() > 1);
-      log_mut_prior_ = -log10(2) - log10(str_variant.num_alleles_by_length()-1);
-    } else {
-      assert(str_variant.num_alleles() > 1);
-    
-      // The allele on each haplotype can mutate to N-1 alleles, so assuming a 
-      // uniform prior each mutation has a prior of 1/(2*(N-1))
-      log_mut_prior_ = -log10(2) - log10(str_variant.num_alleles()-1);
-    }
-  }
-
+public:
+MutationModel(const VCF::Variant& str_variant, MutationPriors& priors, const Options& options);
+~MutationModel();
   /*
    * Log10-likelihood of mutating from the parental to the child allele,
    * given that a mutation occurred
    */
-  double log_prior_mutation(int parental_allele, int child_allele) const {
-    return log_mut_prior_;
-  }
+  double log_prior_mutation(const int& parental_allele, const int& child_allele);
 
-  double max_log_prior_mutation(int parental_allele) const {
-    return log_mut_prior_;
-  }
+  double max_log_prior_mutation(const int& parental_allele);
+
+private:
+   bool combine_alleles;
+   double log_mut_prior_;
+   double beta;
+   double geomp;
+   int central_allele;
+   int period;
+   int ref_allele_size;
 };
 
 #endif

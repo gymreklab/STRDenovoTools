@@ -25,6 +25,7 @@ Options::Options() {
   strvcf = "";
   famfile = "";
   outprefix = "";
+  priors_file = "";
   outputall = false;
   combine_alleles = false;
   use_pop_priors = false;
@@ -43,6 +44,11 @@ Options::Options() {
 
   family = "";
   locus = "";
+
+  default_prior = -5.0;
+  default_beta = 0.0;
+  default_pgeom = 1.0;
+  default_central = 0;
 }
 
 Options::~Options() {}

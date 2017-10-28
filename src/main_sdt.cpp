@@ -31,6 +31,7 @@ using namespace std;
 
 #include "src/common.h"
 #include "src/denovo_scanner.h"
+#include "src/mutation_priors.h"
 #include "src/options.h"
 #include "src/pedigree.h"
 #include "src/vcf_reader.h"
@@ -47,6 +48,11 @@ void show_help() {
 	   << " --out <outprefix>"
 	   << "\n\nOptions:\n"
 	   << "********* Mutation model ***********************\n"
+	   << "--default-prior <FLOAT>    Default log10 mutation rate to use as prior\n"
+	   << "--default-beta <FLOAT>     Default value to use for length constraint\n"
+	   << "--default-geomp <FLOAT>    Default value to use for step size parameter\n"
+	   << "--default-central <INT>    Default central allele\n"
+	   << "--mutation-models <STR>    Use per-locus mutation parameters as priors\n"
 	   << "********* Filtering calls **********************\n"
 	   << "--min-coverage <INT>       Discard calls with less than this much coverage\n"
 	   << "--min-span-coverage <INT>  Discard calls with less than this many spanning reads\n"
@@ -77,6 +83,10 @@ void show_help() {
 void parse_commandline_options(int argc, char* argv[], Options* options) {
   enum LONG_OPTIONS {
     OPT_COMBINEALLELES,
+    OPT_DEFAULTPRIOR,
+    OPT_DEFAULTBETA,
+    OPT_DEFAULTPGEOM,
+    OPT_DEFAULTCENTRAL,
     OPT_FAM,
     OPT_FAMILY,
     OPT_HELP,
@@ -89,6 +99,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_OUTPUTALL,
     OPT_PERIOD,
     OPT_POSTERIORTHRESHOLD,
+    OPT_PRIORS,
     OPT_REGION,
     OPT_REQUIREALLCHILDREN,
     OPT_REQUIRENUMCHILDREN,
@@ -99,6 +110,10 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
   };
   static struct option long_options[] = {
     {"combine-alleles-by-length", 0, 0, OPT_COMBINEALLELES},
+    {"default-prior", 1, 0, OPT_DEFAULTPRIOR},
+    {"default-beta", 1, 0, OPT_DEFAULTBETA},
+    {"default-pgeom", 1, 0, OPT_DEFAULTPGEOM},
+    {"default-central", 1, 0, OPT_DEFAULTCENTRAL},
     {"fam", 1, 0, OPT_FAM},
     {"family", 1, 0, OPT_FAMILY},
     {"help", 0, 0, OPT_HELP},
@@ -107,6 +122,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"min-score", 1, 0, OPT_MINSCORE},
     {"min-span-coverage", 1, 0, OPT_MINSPANCOV},
     {"min-supp-reads", 1, 0, OPT_MINSUPPREADS},
+    {"mutation-models", 1, 0, OPT_PRIORS},
     {"out", 1, 0, OPT_OUT},
     {"output-all-loci", 0, 0, OPT_OUTPUTALL},
     {"period", 1, 0, OPT_PERIOD},
@@ -128,6 +144,18 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     switch (ch) {
     case OPT_COMBINEALLELES:
       options->combine_alleles++;
+      break;
+    case OPT_DEFAULTPRIOR:
+      options->default_prior = atof(optarg);
+      break;
+    case OPT_DEFAULTBETA:
+      options->default_beta = atof(optarg);
+      break;
+    case OPT_DEFAULTPGEOM:
+      options->default_pgeom = atof(optarg);
+      break;
+    case OPT_DEFAULTCENTRAL:
+      options->default_central = atoi(optarg);
       break;
     case OPT_FAM:
       options->famfile = optarg;
@@ -164,6 +192,9 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
       break;
     case OPT_POSTERIORTHRESHOLD:
       options->posterior_threshold = atof(optarg);
+      break;
+    case OPT_PRIORS:
+      options->priors_file = optarg;
       break;
     case OPT_REGION:
       options->region = optarg;
@@ -240,9 +271,14 @@ int main(int argc, char* argv[]) {
   }
   pedigree_set.PrintStatus();
 
+  // Set up priors
+  MutationPriors priors(options.default_prior, options.default_beta,
+			options.default_pgeom, options.default_central,
+			options.priors_file);
+
   // Run denovo analysis, based on trios
   TrioDenovoScanner denovo_scanner(pedigree_set, options);
-  denovo_scanner.scan(strvcf);
+  denovo_scanner.scan(strvcf, priors);
 
   // Tear down
   total_time = (clock() - total_time)/CLOCKS_PER_SEC;

@@ -27,6 +27,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include <string>
 
+#include "src/mutation_priors.h"
 #include "src/options.h"
 #include "src/pedigree.h"
 #include "src/vcf_reader.h"
@@ -41,11 +42,13 @@ class DenovoResult {
 	       const std::string& child_id,
 	       const int& phenotype,
 	       const double& total_ll_no_mutation,
-	       const double& total_ll_one_denovo);
+	       const double& total_ll_one_denovo,
+	       const double& log10prior);
   virtual ~DenovoResult();
 
   const int& get_phenotype() const {return phenotype_;}
   const double& get_posterior() const {return posterior_;}
+  const double& get_prior() const {return log10_prior_mutation_;}
   const std::string& get_child_id() const {return child_id_;}
   const std::string& get_mother_id() const {return mother_id_;}
   const std::string& get_father_id() const {return father_id_;}
@@ -61,6 +64,7 @@ class DenovoResult {
   double total_ll_no_mutation_;
   double total_ll_one_denovo_;
   double posterior_;
+  double log10_prior_mutation_;
 };
 
 class TrioDenovoScanner {
@@ -83,16 +87,32 @@ class TrioDenovoScanner {
 		   << "affected_children\taffected_mutations\taffected_mutation_rate\t"
 		   << "unaffected_children\tunaffected_mutations\tunaffected_mutation_rate\t"
 		   << "p-value\tchildren_with_mutations\n";
-    all_mutations_file_ << "chrom\tpos\tperiod\tfamily\tchild\tphenotype\tposterior\tnewallele\tmutsize\tinparents\n";
+    all_mutations_file_ << "chrom\tpos\tperiod\tprior\tfamily\tchild\tphenotype\tposterior\tnewallele\tmutsize\tinparents\tpoocase\n";
   }
   virtual ~TrioDenovoScanner();
 
-  void scan(VCF::VCFReader& strvcf);
+  void scan(VCF::VCFReader& strvcf, MutationPriors& priors);
   void summarize_results(std::vector<DenovoResult>& dnr,
 			 VCF::Variant& str_variant);
+  /*
+    poocase: describes inheritance pattern
+    -1: unknown
+    1: Mendelian (no denovo)
+    2, 21: New allele from father
+       2: allele a in mother only, allele b not in father
+       21: allele b in mother only, allele a not in father
+    3, 31: new allele from mother
+       3: allele a in father only, allele b not in mother
+       31: allele b in father only, allele a not in mother
+    4, 41: unclear (should this happen?)
+       4: allele a not in either
+       41: allele b not in either
+    5: none of the above (shouldn't happen)
+   */
   void GetMutationInfo(const VCF::Variant& variant, const std::string& mother_id,
 		       const std::string& father_id, const std::string& child_id,
-		       std::string* new_allele, std::string* mut_size, bool* new_allele_in_parents);
+		       std::string* new_allele, std::string* mut_size,
+		       bool* new_allele_in_parents, int* poocase);
 		       
 };
 

@@ -33,6 +33,7 @@ libsdt_a_SOURCES = \
 	locus_inspector.h locus_inspector.cpp \
 	mathops.h mathops.cpp \
 	mutation_model.h mutation_model.cpp \
+	mutation_priors.h mutation_priors.cpp \
 	options.h options.cpp \
 	pedigree.h pedigree.cpp \
 	region.h region.cpp \
