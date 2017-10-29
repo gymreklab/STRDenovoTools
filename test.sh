@@ -1,6 +1,6 @@
 #!/bin/bash
 
-chrom=8
+chrom=22
 
 ./src/STRDenovoTools \
     --strvcf /storage/s1saini/hipstr_rerun/chr${chrom}/hipstr.chr${chrom}.with.1kg.vcf.gz \
@@ -17,8 +17,8 @@ chrom=8
     --combine-alleles-by-length \
     --min-span-cov 10 \
     --min-supp-reads 2 \
-    --region ${chrom}:125907115-125907115 \
     --output-all-loci
+#    --region ${chrom}:125907115-125907115 \
 # 20:52477355-52477366 \
 #    --region 22:17631413-17631426
 #    --region 22:39350442-39350443 \
