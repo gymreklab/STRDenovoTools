@@ -59,16 +59,17 @@ double MutationModel::log_prior_mutation(const int& parental_allele, const int& 
   double up_prob = (1-beta*geomp*parental_allele_centered)/2;
   int k = child_allele_centered - parental_allele_centered;
   //  std::cerr << parental_allele << " " << child_allele << " " << period << " " << parental_allele_centered << " " << child_allele_centered << std::endl;
+  if (k == 0) {
+    // TODO how to handle this case?
+    // Happens for non-unit mutations that round to same unit size
+    k = (child_allele-parental_allele > 0) ? 1 : -1;
+  }
   if (k > 0) {
     return log10(up_prob*geomp*pow(1-geomp, k-1));
   } else if (k < 0) {
     return log10((1-up_prob)*geomp*pow(1-geomp, -1*k-1));
   } else {
-    // If k=0, set mutation prob to 0
-    // This happens for non-unit mutations. e.g. period 5 but get mutation of 1bp
-    // TODO how to handle these?
-    return -DBL_MAX/2;
-    //PrintMessageDieOnError("Encountered mutation of length 0", M_WARNING);
+    PrintMessageDieOnError("Encountered mutation of length 0", M_WARNING);
   }
 }
 
