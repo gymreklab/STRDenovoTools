@@ -156,6 +156,26 @@ namespace VCF {
     return length_allele_sizes_[length_gt_index];
   }
 
+  void Variant::get_length_genotype(int sample_index, int& gt_al, int& gt_bl) const {
+    int gt_a, gt_b; // First get regular genotype
+    get_genotype(sample_index, gt_a, gt_b);
+    // Now convert to lengths (relative to reference)
+    int lenind_a = GetLengthIndexFromGT(gt_a);
+    int lenind_b = GetLengthIndexFromGT(gt_b);
+    gt_al = GetSizeFromLengthAllele(lenind_a);
+    gt_bl = GetSizeFromLengthAllele(lenind_b);
+  }
+
+  void Variant::get_length_genotype(const std::string& sample, int& gt_al, int& gt_bl) const {
+    int gt_a, gt_b; // First get regular genotype
+    get_genotype(sample, gt_a, gt_b);
+    // Now convert to lengths (relative to reference)
+    int lenind_a = GetLengthIndexFromGT(gt_a);
+    int lenind_b = GetLengthIndexFromGT(gt_b);
+    gt_al = GetSizeFromLengthAllele(lenind_a);
+    gt_bl = GetSizeFromLengthAllele(lenind_b);
+  }
+
   void Variant::get_genotype(const std::string& sample, int& gt_a, int& gt_b) const {
     int sample_index = vcf_reader_->get_sample_index(sample);
     if (sample_index == -1)

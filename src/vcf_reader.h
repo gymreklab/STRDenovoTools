@@ -245,6 +245,9 @@ namespace VCF {
       free(format_vals);
     }
 
+    void get_length_genotype(const std::string& sample, int& gt_al, int& gt_bl) const;
+    void get_length_genotype(int sample_index, int& gt_al, int& gt_bl) const;
+
     void get_genotype(const std::string& sample, int& gt_a, int& gt_b) const;
 
     void get_genotype(int sample_index, int& gt_a, int& gt_b) const{

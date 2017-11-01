@@ -191,16 +191,16 @@ int main(int argc, char* argv[]) {
   locus_inspector.Inspect(str_variant, myfam.get_mother(),
 			  strvcf.get_sample_index(myfam.get_mother()), 
 			  pedigree_set.get_families(),
-			  "mother", PT_MISSING);
+			  "mother", PT_MISSING, false);
   locus_inspector.Inspect(str_variant, myfam.get_father(),
 			  strvcf.get_sample_index(myfam.get_father()),
 			  pedigree_set.get_families(),
-			  "father", PT_MISSING);
+			  "father", PT_MISSING, false);
   for (size_t i = 0; i < myfam.num_children(); i++) {
     locus_inspector.Inspect(str_variant, myfam.get_children()[i],
 			    strvcf.get_sample_index(myfam.get_children()[i]),
 			    pedigree_set.get_families(),
-			    "child", myfam.GetChildrenStatus()[i]);
+			    "child", myfam.GetChildrenStatus()[i], false);
   }
   str_variant.destroy_record();
   return 0;

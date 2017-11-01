@@ -84,10 +84,10 @@ class TrioDenovoScanner {
     locus_summary_ << "chrom\tpos\tend\tperiod\t"
 		   << "num_alleles_bylength\tnum_alleles_byseq\thet_by_length\thet_by_seq\t"
 		   << "total_children\ttotal_mutations\ttotal_mutation_rate\t"
-		   << "affected_children\taffected_mutations\taffected_mutation_rate\t"
-		   << "unaffected_children\tunaffected_mutations\tunaffected_mutation_rate\t"
+		   << "affected_children\taffected_mutations\taffected_new_mutations\taffected_mutation_rate\t"
+		   << "unaffected_children\tunaffected_mutations\tunaffected_new_mutations\tunaffected_mutation_rate\t"
 		   << "p-value\tchildren_with_mutations\n";
-    all_mutations_file_ << "chrom\tpos\tperiod\tprior\tfamily\tchild\tphenotype\tposterior\tnewallele\tmutsize\tinparents\tpoocase\n";
+    all_mutations_file_ << "chrom\tpos\tperiod\tprior\tfamily\tchild\tphenotype\tposterior\tnewallele\tmutsize\tinparents\tpoocase\tisnew\tcase_count\tctrl_count\tunk_count\n";
   }
   virtual ~TrioDenovoScanner();
 

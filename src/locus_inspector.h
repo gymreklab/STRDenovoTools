@@ -34,12 +34,12 @@ class LocusInspector {
 
   void Inspect(VCF::Variant& str_variant, const std::string& sample_id, const int& sample_index,
 	       std::vector<NuclearFamily> families,
-	       const std::string& label, const int& status);
- private:
-  int GetAlleleCount(VCF::Variant& str_variant, int allele);
+	       const std::string& label, const int& status, const bool& combine_alleles);
   void GetAlleleCountByPhenotype(VCF::Variant& variant, std::vector<NuclearFamily> families,
 				 int allele,
-				 int* count_control, int* count_case, int* count_unknown);
+				 int* count_control, int* count_case, int* count_unknown, const bool& combine_alleles);
+ private:
+  int GetAlleleCount(VCF::Variant& str_variant, int allele, const bool& combine_alleles);
 };
 
 #endif  // SRC_LOCUS_INSPECTOR_H__

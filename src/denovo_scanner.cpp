@@ -25,6 +25,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "src/denovo_allele_priors.h"
 #include "src/denovo_scanner.h"
+#include "src/locus_inspector.h"
 #include "src/mathops.h"
 #include "src/mutation_model.h"
 #include "src/vcf_input.h"
@@ -348,6 +349,7 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
 
 void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
 					  VCF::Variant& str_variant) {
+  LocusInspector locus_inspector;
   if (dnr.empty()) {
     stringstream ss;
     ss << " Skipping - no called children";
@@ -365,6 +367,8 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   int num_mutations = 0;
   int num_mutations_unaffected = 0;
   int num_mutations_affected = 0;
+  int num_new_affected = 0;
+  int num_new_unaffected = 0;
   std::vector<std::string>children_with_mutations;
   for (auto dnr_iter = dnr.begin(); dnr_iter != dnr.end(); dnr_iter++) {
     total_children++;
@@ -374,24 +378,43 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
     GetMutationInfo(str_variant, dnr_iter->get_mother_id(), dnr_iter->get_father_id(),
 		    dnr_iter->get_child_id(), &new_allele, &mut_size,
 		    &new_allele_in_parents, &poocase);
+    int count_control = 0;
+    int count_case = 0;
+    int count_unknown = 0;
+    bool is_new = false;
+    if (new_allele != "NA") {
+      locus_inspector.GetAlleleCountByPhenotype(str_variant, pedigree_set_.get_families(),
+						atoi(new_allele.c_str()), &count_control, &count_case, &count_unknown,
+						options_.combine_alleles);
+      is_new = (count_unknown == 0);
+    }
     if (dnr_iter->get_posterior() > options_.posterior_threshold || options_.outputall) {
       all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t"
 			  << period  << "\t" << pow(10, dnr_iter->get_prior()) << "\t"
 			  << dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
 			  << dnr_iter->get_phenotype() << "\t" << dnr_iter->get_posterior() << "\t"
 			  << new_allele << "\t" << mut_size << "\t"
-			  << new_allele_in_parents << "\t" << poocase
+			  << new_allele_in_parents << "\t" << poocase << "\t"
+			  << is_new << "\t" << count_case << "\t" << count_control << "\t" << count_unknown
 			  << "\n";
       all_mutations_file_.flush();
     }
     if (dnr_iter->get_posterior() > options_.posterior_threshold) {
       num_mutations++;
-      children_with_mutations.push_back(dnr_iter->get_family_id() + ":" + dnr_iter->get_child_id());
+      children_with_mutations.push_back(dnr_iter->get_family_id() + ":" +
+					std::to_string(dnr_iter->get_phenotype()) + ":" + new_allele + ":" +
+					std::to_string(count_control)+","+std::to_string(count_case) + ","+std::to_string(count_unknown));
       if (dnr_iter->get_phenotype() == PT_CONTROL) {
 	num_mutations_unaffected++;
+	if (is_new) {
+	  num_new_unaffected++;
+	}
       }
       if (dnr_iter->get_phenotype() == PT_CASE) {
 	num_mutations_affected++;
+	if (is_new) {
+	  num_new_affected++;
+	}
       }
     }
     if (dnr_iter->get_phenotype() == PT_CONTROL) {
@@ -435,8 +458,8 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
 		 << str_variant.num_alleles_by_length(options_.round_alleles) << "\t" << str_variant.num_alleles()  << "\t"
 		 << str_variant.heterozygosity_by_length(options_.round_alleles) << "\t" << str_variant.heterozygosity() << "\t"
 		 << total_children << "\t" << num_mutations << "\t" << total_mutation_rate << "\t"
-		 << total_affected << "\t" << num_mutations_affected << "\t" << affected_mutation_rate << "\t"
-		 << total_unaffected << "\t" << num_mutations_unaffected << "\t" << unaffected_mutation_rate << "\t"
+		 << total_affected << "\t" << num_mutations_affected << "\t" << num_new_affected << "\t" << affected_mutation_rate << "\t"
+		 << total_unaffected << "\t" << num_mutations_unaffected << "\t" << num_new_unaffected << "\t" << unaffected_mutation_rate << "\t"
 		 << p_value << "\t" << children_with_mutations_string << "\n";
   locus_summary_.flush();
 }
