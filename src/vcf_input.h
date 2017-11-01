@@ -85,6 +85,9 @@ class UnphasedGL : public GL {
  public:
   explicit UnphasedGL(const VCF::Variant& variant,
 		      const Options& options): options_(options) {
+    if (options_.combine_alleles) {
+      return; // don't waste our time
+    }
     if (!variant.has_format_field(UNPHASED_GL_KEY))
       PrintMessageDieOnError("Required FORMAT field " + UNPHASED_GL_KEY + " not present in VCF", M_ERROR);
     if (!build(variant))

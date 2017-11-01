@@ -147,27 +147,8 @@ void UnphasedLengthGL::convert_gl_to_length(const std::vector<float>& gl_vals,
       float addval = gl_vals[oldindex];
       float currentval = (*gl_by_length)[newindex];
       (*gl_by_length)[newindex] = log_sum_exp(currentval, addval);
-      // TODO remove debug info
-      /*if (sample == "SSC10003") {
-	std::cerr << a1 << "," << a2 << " " << a1_length << "," << a2_length << " " 
-		  << variant.GetSizeFromLengthAllele(a1_length) << "," << variant.GetSizeFromLengthAllele(a2_length) << " " 
-		  << addval << " " << currentval << std::endl;
-		  }*/
     }
   }
-
-  // TODO remove debug info
-  /*
-  if (sample == "SSC10003") {
-  std::cerr << "Length-based " << std::endl;
-  for (int a1_length = 0; a1_length < num_alleles_; a1_length++) {
-    for (int a2_length = 0; a2_length <= a1_length; a2_length++) {
-      int newindex = a1_length*(a1_length+1)/2 + a2_length;
-      std::cerr << a1_length << "," << a2_length << " " << variant.GetSizeFromLengthAllele(a1_length) << "," << variant.GetSizeFromLengthAllele(a2_length) << " " 
-		<< (*gl_by_length)[newindex] << std::endl;
-    }
-    }
-    }*/
 }
 
 bool UnphasedLengthGL::build(const VCF::Variant& variant){
@@ -182,7 +163,7 @@ bool UnphasedLengthGL::build(const VCF::Variant& variant){
   variant.get_FORMAT_value_single_string(MALLREADS_KEY, mallreads_values);
   variant.get_FORMAT_value_single_string(GB_KEY, gb_values);
   num_samples_         = 0;
-  num_alleles_         = variant.num_alleles_by_length();
+  num_alleles_         = variant.num_alleles_by_length(options_.round_alleles);
   num_seq_alleles_     = variant.num_alleles();
   int vcf_sample_index = 0;
   const std::vector<std::string>& samples = variant.get_samples();

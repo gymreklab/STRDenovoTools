@@ -19,6 +19,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <set>
 
+#include <math.h>
 #include <sys/stat.h>
 
 #include "vcf_reader.h"
@@ -29,10 +30,22 @@ namespace VCF {
     return vcf_reader_->get_samples();
   }
 
-  int Variant::num_alleles_by_length() const {
+  int Variant::round_allele_length(int allele) const {
+    int period = 0;
+    get_INFO_value_single_int("PERIOD", period);
+    int rounded_allele = round(static_cast<float>(allele)/static_cast<float>(period))*period;
+    return rounded_allele;
+  }
+
+  int Variant::num_alleles_by_length(const bool& round_allele) const {
+    int ref_allele_size = (int)alleles_.front().size();
     std::set<int> lengths;
     for (auto iter=alleles_.begin(); iter!=alleles_.end(); iter++) {
-      lengths.insert((int)iter->size());
+      if (round_allele) {
+	lengths.insert(round_allele_length((int)iter->size()-ref_allele_size));
+      } else {
+	lengths.insert((int)iter->size());
+      }
     }
     return (int)lengths.size();
   }
@@ -61,9 +74,9 @@ namespace VCF {
     return 1-x; 
   }
 
-  float Variant::heterozygosity_by_length() const {
-    std::vector<double> allele_freqs(num_alleles_by_length(), 1.0);
-    double total_count = num_alleles_by_length();
+  float Variant::heterozygosity_by_length(const bool& round_alleles) const {
+    std::vector<double> allele_freqs(num_alleles_by_length(round_alleles), 1.0);
+    double total_count = num_alleles_by_length(round_alleles);
     const std::vector<std::string> samples = get_samples();
     int gt_a, gt_b;
     for (auto iter = samples.begin(); iter != samples.end(); iter++) {
@@ -84,34 +97,40 @@ namespace VCF {
     return 1-x; 
   }
 
-  void Variant::build_alleles_by_length() {
+  void Variant::build_alleles_by_length(const bool& round_alleles) {
     //    std::cerr << "building allele length map " << std::endl;
     // Build map of GT->allele length. Assume alleles ordered by length
     // Except reference allele, which is always first
     const std::vector<std::string> alleles = get_alleles();
     int ref_allele_size = (int) alleles.front().size();
-    length_allele_sizes_.resize(num_alleles_by_length(), 0);
+    length_allele_sizes_.resize(num_alleles_by_length(round_alleles), 0);
     // First element is always ref allele
     length_allele_sizes_[0] = 0;
     gt_to_length_index_[0] = 0;
     int max_index = 0;
     // Go through rest of alleles
-    int allele_size = (int)alleles[1].size();
+    int allele_size = (int)alleles[1].size() - ref_allele_size;
+    if (round_alleles) {
+      allele_size = round_allele_length(allele_size);
+    }
     int allele_index = 1;
-    if (allele_size == ref_allele_size) {
+    if (allele_size == 0) {
       allele_index = 0;
     }
     int prev_index = 0; // Only gets set when we encounter ref allele
     for (int i = 1; i < alleles.size(); i++) {
-      int len = (int)alleles[i].size();
+      int len = (int)alleles[i].size() - ref_allele_size;
+      if (round_alleles) {
+	len = round_allele_length(len);
+      }
       assert(len >= allele_size); // Assume alleles ordered by length
-      if (len == ref_allele_size) { // If this alleles is ref length, keep track of prev index
+      if (len == 0) { // If this alleles is ref length, keep track of prev index
 	allele_size = len;
 	if (allele_index != 0) {
 	  prev_index = allele_index;
 	}
 	allele_index = 0;
-      } else if (allele_size == ref_allele_size) { // If previous allele was ref length, continue indexing where we left off
+      } else if (allele_size == 0) { // If previous allele was ref length, continue indexing where we left off
 	allele_size = len;
 	allele_index = prev_index + 1;
       } else if (len == allele_size) {
@@ -121,14 +140,12 @@ namespace VCF {
 	allele_index++;
       }
       gt_to_length_index_[i] = allele_index;
-      length_allele_sizes_[allele_index] = allele_size - ref_allele_size;
+      length_allele_sizes_[allele_index] = allele_size;
       if (allele_index > max_index) {
 	max_index = allele_index;
       }
-      //std::cerr << "length map " << i << " " << allele_index << " " << allele_size-ref_allele_size << " " << (len==ref_allele_size) << std::endl;
     }
-    //    std::cerr << "done building allele length map " << max_index << " " << num_alleles_by_length() << std::endl;
-    assert(max_index == num_alleles_by_length()-1);
+    assert(max_index == num_alleles_by_length(round_alleles)-1);
   }
 
   int Variant::GetLengthIndexFromGT(const int& gt_index) const {
@@ -242,12 +259,12 @@ namespace VCF {
     }
   }
 
-  bool VCFReader::get_next_variant(Variant* variant){
+  bool VCFReader::get_next_variant(Variant* variant, const bool& round){
     vcf_record_ = bcf_init(); // need to destroy after variant goes out of scope
     if ((tbx_iter_ != NULL) && tbx_itr_next(vcf_input_, tbx_input_, tbx_iter_, &vcf_line_) >= 0){
       if (vcf_parse(&vcf_line_, vcf_header_, vcf_record_) < 0)
 	PrintMessageDieOnError("Failed to parse VCF record", M_ERROR);
-      *variant = Variant(vcf_header_, vcf_record_, this);
+      *variant = Variant(vcf_header_, vcf_record_, this, round);
       return true;
     }
   
@@ -264,7 +281,7 @@ namespace VCF {
       if ((tbx_iter_ != NULL) && tbx_itr_next(vcf_input_, tbx_input_, tbx_iter_, &vcf_line_) >= 0){
 	if (vcf_parse(&vcf_line_, vcf_header_, vcf_record_) < 0)
 	  PrintMessageDieOnError("Failed to parse VCF record", M_ERROR);
-	*variant = Variant(vcf_header_, vcf_record_, this);
+	*variant = Variant(vcf_header_, vcf_record_, this, round);
 	return true;
       }
     }

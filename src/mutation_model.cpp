@@ -25,9 +25,10 @@ MutationModel::MutationModel(const VCF::Variant& str_variant,
 			     MutationPriors& priors,
 			     const Options& options) {
   combine_alleles = options.combine_alleles;
+  round_alleles = options.round_alleles;
   if (options.combine_alleles) {
-    assert(str_variant.num_alleles_by_length() > 1);
-    log_mut_prior_ = -log10(2) - log10(str_variant.num_alleles_by_length()-1);
+    assert(str_variant.num_alleles_by_length(options.round_alleles) > 1);
+    log_mut_prior_ = -log10(2) - log10(str_variant.num_alleles_by_length(options.round_alleles)-1);
     std::string chrom = str_variant.get_chromosome();
     int32_t start;
     str_variant.get_INFO_value_single_int("START", start);
@@ -47,20 +48,18 @@ MutationModel::MutationModel(const VCF::Variant& str_variant,
 
 /*
   Use mutation model to get probability of a mutation step size
-  parental and child alleles are in total bp
+  parental and child alleles are in bp relative to reference allele
   central_allele is in num. repeat units compared to reference
  */
 double MutationModel::log_prior_mutation(const int& parental_allele, const int& child_allele) {
   if (!combine_alleles) {
     return log_mut_prior_;
   }
-  int parental_allele_centered = (parental_allele - ref_allele_size)/period - central_allele;
-  int child_allele_centered = (child_allele - ref_allele_size)/period - central_allele;
+  int parental_allele_centered = (parental_allele)/period - central_allele;
+  int child_allele_centered = (child_allele)/period - central_allele;
   double up_prob = (1-beta*geomp*parental_allele_centered)/2;
   int k = child_allele_centered - parental_allele_centered;
-  //  std::cerr << parental_allele << " " << child_allele << " " << period << " " << parental_allele_centered << " " << child_allele_centered << std::endl;
-  if (k == 0) {
-    // TODO how to handle this case?
+  if (k == 0 && !round_alleles) {
     // Happens for non-unit mutations that round to same unit size
     k = (child_allele-parental_allele > 0) ? 1 : -1;
   }
@@ -69,7 +68,7 @@ double MutationModel::log_prior_mutation(const int& parental_allele, const int& 
   } else if (k < 0) {
     return log10((1-up_prob)*geomp*pow(1-geomp, -1*k-1));
   } else {
-    PrintMessageDieOnError("Encountered mutation of length 0", M_WARNING);
+    PrintMessageDieOnError("Encountered mutation of length 0", M_ERROR);
   }
 }
 

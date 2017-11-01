@@ -68,6 +68,7 @@ void show_help() {
 	   << "--max-num-alleles <INT>    Filter loci with more than this many alleles. \n"
 	   << "********* Parameters for de novo calling *******\n"
 	   << "--combine-alleles-by-length Collapse alleles of the same length to one. \n"
+	   << "--round-alleles             Round allele lengths to nearest repeat unit. \n"
 	   << "--use-pop-priors            Get genotype priors from population. \n"
 	   << "--posterior-threshold <FLOAT>  Cutoff to call something de novo. \n"
 	   << "********* Filtering loci ***********************\n"
@@ -103,6 +104,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_REGION,
     OPT_REQUIREALLCHILDREN,
     OPT_REQUIRENUMCHILDREN,
+    OPT_ROUNDALLELES,
     OPT_STRVCF,
     OPT_USEPOPPRIORS,
     OPT_VERBOSE,
@@ -130,6 +132,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"region", 1, 0, OPT_REGION},
     {"require-all-children", 0, 0, OPT_REQUIREALLCHILDREN},
     {"require-num-children", 1, 0, OPT_REQUIRENUMCHILDREN},
+    {"round-alleles", 0, 0, OPT_ROUNDALLELES},
     {"strvcf", 1, 0, OPT_STRVCF},
     {"use-pop-priors", 0, 0, OPT_USEPOPPRIORS},
     {"verbose", 0, 0, OPT_VERBOSE},
@@ -204,6 +207,9 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
       break;
     case OPT_REQUIRENUMCHILDREN:
       options->require_num_children = atoi(optarg);
+      break;
+    case OPT_ROUNDALLELES:
+      options->round_alleles++;
       break;
     case OPT_STRVCF:
       options->strvcf = optarg;

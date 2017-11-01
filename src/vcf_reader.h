@@ -64,7 +64,7 @@ namespace VCF {
       num_missing_ = 0;
     }
 
-    Variant(bcf_hdr_t* vcf_header, bcf1_t* vcf_record, VCFReader* vcf_reader){
+    Variant(bcf_hdr_t* vcf_header, bcf1_t* vcf_record, VCFReader* vcf_reader, const bool& round){
       vcf_header_  = vcf_header;
       vcf_record_  = vcf_record;
       vcf_reader_  = vcf_reader;
@@ -76,7 +76,7 @@ namespace VCF {
       for (int i = 0; i < num_samples_; ++i)
 	if (missing_[i])
 	  ++num_missing_;
-      build_alleles_by_length();
+      build_alleles_by_length(round);
     }
     
     const std::vector<std::string>& get_alleles() const { return alleles_;         }
@@ -85,15 +85,16 @@ namespace VCF {
     int num_alleles() const { return alleles_.size(); }
     int num_samples() const { return num_samples_;    }
     int num_missing() const { return num_missing_;    }
-    int num_alleles_by_length() const;
+    int num_alleles_by_length(const bool& round_alleles) const;
+    int round_allele_length(int allele) const;
     float heterozygosity() const;
-    float heterozygosity_by_length() const;
+    float heterozygosity_by_length(const bool& round_alleles) const;
     
     // Build mapping of original GT index to length based index
-    void build_alleles_by_length();
+    void build_alleles_by_length(const bool& round);
     // Convert between standard alleles in VCF to alleles ordered by length
     int GetLengthIndexFromGT(const int& gt_index) const;
-    // Get length of allele from length-based allele index (absolute length, in bp)
+    // Get length of allele from length-based allele index (length in bp relative to reference allele)
     int GetSizeFromLengthAllele(const int& length_gt_index) const;
 
     void destroy_record() {bcf_destroy(vcf_record_);}
@@ -327,7 +328,7 @@ namespace VCF {
 
     const std::vector<std::string>& get_samples() const { return samples_; }
 
-    bool get_next_variant(Variant* variant);
+    bool get_next_variant(Variant* variant, const bool& round_allele);
   };
 
 }

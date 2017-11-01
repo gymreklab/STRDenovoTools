@@ -40,6 +40,7 @@ MutationModel(const VCF::Variant& str_variant, MutationPriors& priors, const Opt
 
 private:
    bool combine_alleles;
+   bool round_alleles;
    double log_mut_prior_;
    double beta;
    double geomp;

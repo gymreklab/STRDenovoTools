@@ -28,6 +28,7 @@ Options::Options() {
   priors_file = "";
   outputall = false;
   combine_alleles = false;
+  round_alleles = false;
   use_pop_priors = false;
   verbose = false;
   require_all_children = false;

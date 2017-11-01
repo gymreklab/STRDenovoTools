@@ -45,12 +45,12 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
   VCF::Variant str_variant;
   std::vector<NuclearFamily> families = pedigree_set_.get_families();
   std::vector<DenovoResult> denovo_results;
-  while (strvcf.get_next_variant(&str_variant)) {
+  while (strvcf.get_next_variant(&str_variant, options_.round_alleles)) {
     denovo_results.clear();
     // Initial checks
     int num_alleles = str_variant.num_alleles();
     if (options_.combine_alleles) {
-      num_alleles = str_variant.num_alleles_by_length();
+      num_alleles = str_variant.num_alleles_by_length(options_.round_alleles);
     }
     if (num_alleles <= 1) {
       str_variant.destroy_record();
@@ -90,9 +90,9 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
       //unphased_gls = new UnphasedLengthGL(str_variant, options_);
       unphased_gls = &unphased_length_gls;
       if (options_.use_pop_priors) {
-	dip_gt_priors = new PopulationGenotypeLengthPrior(str_variant, families);
+	dip_gt_priors = new PopulationGenotypeLengthPrior(str_variant, families, options_.round_alleles);
       } else {
-	dip_gt_priors = new UniformGenotypeLengthPrior(str_variant, families);
+	dip_gt_priors = new UniformGenotypeLengthPrior(str_variant, families, options_.round_alleles);
       }
     } else {
       //unphased_gls = new UnphasedGL(str_variant, options_);
@@ -432,8 +432,8 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   }
   locus_summary_ << str_variant.get_chromosome() << "\t"
 		 << start << "\t" << end << "\t" << period << "\t"
-		 << str_variant.num_alleles_by_length() << "\t" << str_variant.num_alleles()  << "\t"
-		 << str_variant.heterozygosity_by_length() << "\t" << str_variant.heterozygosity() << "\t"
+		 << str_variant.num_alleles_by_length(options_.round_alleles) << "\t" << str_variant.num_alleles()  << "\t"
+		 << str_variant.heterozygosity_by_length(options_.round_alleles) << "\t" << str_variant.heterozygosity() << "\t"
 		 << total_children << "\t" << num_mutations << "\t" << total_mutation_rate << "\t"
 		 << total_affected << "\t" << num_mutations_affected << "\t" << affected_mutation_rate << "\t"
 		 << total_unaffected << "\t" << num_mutations_unaffected << "\t" << unaffected_mutation_rate << "\t"

@@ -54,6 +54,7 @@ class Options {
   // Options for denovo calling
   bool use_pop_priors;
   bool combine_alleles;
+  bool round_alleles;
   double posterior_threshold;
 
   // Other options
