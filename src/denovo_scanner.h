@@ -111,7 +111,7 @@ class TrioDenovoScanner {
    */
   void GetMutationInfo(const VCF::Variant& variant, const std::string& mother_id,
 		       const std::string& father_id, const std::string& child_id,
-		       std::string* new_allele, std::string* mut_size,
+		       std::string* new_allele, std::string* new_allele_raw, std::string* mut_size,
 		       bool* new_allele_in_parents, int* poocase);
 		       
 };

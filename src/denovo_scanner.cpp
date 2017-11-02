@@ -238,7 +238,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
  */
 void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::string& mother_id,
 					const std::string& father_id, const std::string& child_id,
-					std::string* new_allele, std::string* mut_size,
+					std::string* new_allele, std::string* new_allele_raw, std::string* mut_size,
 					bool* new_allele_in_parents, int* poocase) {
   int gt_mother_a, gt_mother_b, gt_father_a, gt_father_b, gt_child_a, gt_child_b;
   int ref_allele_size = (int)variant.get_allele(0).size();
@@ -268,6 +268,7 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
       (gt_child_b != gt_father_a && gt_child_b != gt_father_b)) {
     int nal = (int)variant.get_allele(gt_child_b).size()-ref_allele_size;
     *new_allele = std::to_string(nal);
+    *new_allele_raw = std::to_string(nal);
     if (options_.round_alleles) {
       *new_allele = std::to_string(variant.round_allele_length(nal));
     }
@@ -287,6 +288,7 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
       gt_child_a != gt_father_a && gt_child_a != gt_father_b) {
     int nal = (int)variant.get_allele(gt_child_a).size()-ref_allele_size;
     *new_allele = std::to_string(nal);
+    *new_allele_raw = std::to_string(nal);
     if (options_.round_alleles) {
       *new_allele = std::to_string(variant.round_allele_length(nal));
     }
@@ -307,6 +309,7 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
       (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b)) {
     int nal = (int)variant.get_allele(gt_child_b).size()-ref_allele_size;
     *new_allele = std::to_string(nal);
+    *new_allele_raw = std::to_string(nal);
     if (options_.round_alleles) {
       *new_allele = std::to_string(variant.round_allele_length(nal));
     }
@@ -326,6 +329,7 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
       (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b)) {
     int nal = (int)variant.get_allele(gt_child_a).size()-ref_allele_size;
     *new_allele = std::to_string(nal);
+    *new_allele_raw = std::to_string(nal);
     if (options_.round_alleles) {
       *new_allele = std::to_string(variant.round_allele_length(nal));
     }
@@ -344,6 +348,7 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
       gt_child_a != gt_father_a && gt_child_a != gt_father_b) {
     int nal = (int)variant.get_allele(gt_child_a).size()-ref_allele_size;
     *new_allele = std::to_string(nal);
+    *new_allele_raw = std::to_string(nal);
     if (options_.round_alleles) {
       *new_allele = std::to_string(variant.round_allele_length(nal));
     }
@@ -368,6 +373,7 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
       gt_child_b != gt_father_a && gt_child_b != gt_father_b) {
     int nal = (int)variant.get_allele(gt_child_b).size()-ref_allele_size;
     *new_allele = std::to_string(nal);
+    *new_allele_raw = std::to_string(nal);
     if (options_.round_alleles) {
       *new_allele = std::to_string(variant.round_allele_length(nal));
     }
@@ -417,11 +423,11 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   std::vector<std::string>children_with_mutations;
   for (auto dnr_iter = dnr.begin(); dnr_iter != dnr.end(); dnr_iter++) {
     total_children++;
-    std::string new_allele, mut_size;
+    std::string new_allele, new_allele_raw, mut_size;
     bool new_allele_in_parents = false;
     int poocase;
     GetMutationInfo(str_variant, dnr_iter->get_mother_id(), dnr_iter->get_father_id(),
-		    dnr_iter->get_child_id(), &new_allele, &mut_size,
+		    dnr_iter->get_child_id(), &new_allele, &new_allele_raw, &mut_size,
 		    &new_allele_in_parents, &poocase);
     int count_control = 0;
     int count_case = 0;
@@ -438,7 +444,7 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
 			  << period  << "\t" << pow(10, dnr_iter->get_prior()) << "\t"
 			  << dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
 			  << dnr_iter->get_phenotype() << "\t" << dnr_iter->get_posterior() << "\t"
-			  << new_allele << "\t" << mut_size << "\t"
+			  << new_allele_raw << "\t" << mut_size << "\t"
 			  << new_allele_in_parents << "\t" << poocase << "\t"
 			  << is_new << "\t" << count_case << "\t" << count_control << "\t" << count_unknown
 			  << "\n";
@@ -447,7 +453,7 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
     if (dnr_iter->get_posterior() > options_.posterior_threshold) {
       num_mutations++;
       children_with_mutations.push_back(dnr_iter->get_family_id() + ":" +
-					std::to_string(dnr_iter->get_phenotype()) + ":" + new_allele + ":" +
+					std::to_string(dnr_iter->get_phenotype()) + ":" + new_allele_raw + ":" +
 					std::to_string(count_control)+","+std::to_string(count_case) + ","+std::to_string(count_unknown));
       if (dnr_iter->get_phenotype() == PT_CONTROL) {
 	num_mutations_unaffected++;
