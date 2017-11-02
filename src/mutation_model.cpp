@@ -66,7 +66,11 @@ double MutationModel::log_prior_mutation(const int& parental_allele, const int& 
   double up_prob = (1-beta*geomp*parental_allele_centered)/2;
   if (up_prob > 1) {
     up_prob = 0.9999; // boundary state
-    PrintMessageDieOnError("Encountered boundary allele " + std::to_string(parental_allele_centered), M_ERROR);
+    PrintMessageDieOnError("Encountered boundary allele " + std::to_string(parental_allele_centered), M_WARNING);
+  }
+  if (up_prob < 0) {
+    up_prob = 0.0001; // boundary state
+    PrintMessageDieOnError("Encountered boundary allele " + std::to_string(parental_allele_centered), M_WARNING);
   }
   int k = child_allele_centered - parental_allele_centered;
   double logp;

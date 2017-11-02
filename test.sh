@@ -17,7 +17,7 @@ chrom=10
     --combine-alleles-by-length \
     --min-span-cov 10 \
     --min-supp-reads 2 \
-    --region ${chrom}:383896-383896 \
+    --region ${chrom} \
     --round-alleles \
     --include-invariant \
     --output-all-loci
