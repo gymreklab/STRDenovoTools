@@ -266,7 +266,11 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
   if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) &&
       (gt_child_a != gt_father_a && gt_child_a != gt_father_b) &&
       (gt_child_b != gt_father_a && gt_child_b != gt_father_b)) {
-    *new_allele = std::to_string((int)variant.get_allele(gt_child_b).size()-ref_allele_size);
+    int nal = (int)variant.get_allele(gt_child_b).size()-ref_allele_size;
+    *new_allele = std::to_string(nal);
+    if (options_.round_alleles) {
+      *new_allele = std::to_string(variant.round_allele_length(nal));
+    }
     int diff1 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_a).size();
     int diff2 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_b).size();
     if (abs(diff1) < abs(diff2)) {
@@ -281,7 +285,11 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
   if ((gt_child_b == gt_mother_a || gt_child_b == gt_mother_b) &&
       (gt_child_b != gt_father_a && gt_child_b != gt_father_b) &&
       gt_child_a != gt_father_a && gt_child_a != gt_father_b) {
-    *new_allele = std::to_string((int)variant.get_allele(gt_child_a).size()-ref_allele_size);
+    int nal = (int)variant.get_allele(gt_child_a).size()-ref_allele_size;
+    *new_allele = std::to_string(nal);
+    if (options_.round_alleles) {
+      *new_allele = std::to_string(variant.round_allele_length(nal));
+    }
     int diff1 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_a).size();
     int diff2 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_b).size();
     if (abs(diff1) < abs(diff2)) {
@@ -297,7 +305,11 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
   if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) &&
       (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b) &&
       (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b)) {
-    *new_allele = std::to_string((int)variant.get_allele(gt_child_b).size()-ref_allele_size);
+    int nal = (int)variant.get_allele(gt_child_b).size()-ref_allele_size;
+    *new_allele = std::to_string(nal);
+    if (options_.round_alleles) {
+      *new_allele = std::to_string(variant.round_allele_length(nal));
+    }
     int diff1 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_a).size();
     int diff2 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_b).size();
     if (abs(diff1) < abs(diff2)) {
@@ -312,7 +324,11 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
   if ((gt_child_b == gt_father_a || gt_child_b == gt_father_b) &&
       (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b) &&
       (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b)) {
-    *new_allele = std::to_string((int)variant.get_allele(gt_child_a).size()-ref_allele_size);
+    int nal = (int)variant.get_allele(gt_child_a).size()-ref_allele_size;
+    *new_allele = std::to_string(nal);
+    if (options_.round_alleles) {
+      *new_allele = std::to_string(variant.round_allele_length(nal));
+    }
     int diff1 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_a).size();
     int diff2 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_b).size();
     if (abs(diff1) < abs(diff2)) {
@@ -326,7 +342,11 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
   // Case 4: Not clear, pick closest allele that is not equal
   if (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b &&
       gt_child_a != gt_father_a && gt_child_a != gt_father_b) {
-    *new_allele = std::to_string((int)variant.get_allele(gt_child_a).size()-ref_allele_size);
+    int nal = (int)variant.get_allele(gt_child_a).size()-ref_allele_size;
+    *new_allele = std::to_string(nal);
+    if (options_.round_alleles) {
+      *new_allele = std::to_string(variant.round_allele_length(nal));
+    }
     int diff1 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_a).size();
     int diff2 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_b).size();
     int diff3 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_a).size();
@@ -346,7 +366,11 @@ void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::
   }
   if (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b &&
       gt_child_b != gt_father_a && gt_child_b != gt_father_b) {
-    *new_allele = std::to_string((int)variant.get_allele(gt_child_b).size()-ref_allele_size);
+    int nal = (int)variant.get_allele(gt_child_b).size()-ref_allele_size;
+    *new_allele = std::to_string(nal);
+    if (options_.round_alleles) {
+      *new_allele = std::to_string(variant.round_allele_length(nal));
+    }
     int diff1 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_a).size();
     int diff2 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_b).size();
     int diff3 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_a).size();
