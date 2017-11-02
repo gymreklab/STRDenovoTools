@@ -28,7 +28,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 class MutationModel {
 public:
-MutationModel(const VCF::Variant& str_variant, MutationPriors& priors, const Options& options);
+  MutationModel(const VCF::Variant& str_variant, MutationPriors& priors, const Options& options, const bool& dummy_models);
 ~MutationModel();
   /*
    * Log10-likelihood of mutating from the parental to the child allele,

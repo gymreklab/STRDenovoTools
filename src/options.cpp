@@ -37,6 +37,7 @@ Options::Options() {
   max_num_alleles = 25;
   region = "";
   posterior_threshold = 0.9;
+  include_invariant = false;
   period = 0;
   min_coverage = 0;
   min_score = 0.0;

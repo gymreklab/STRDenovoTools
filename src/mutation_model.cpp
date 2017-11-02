@@ -19,16 +19,20 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cfloat>
 
+#include "math.h"
+
 #include "src/mutation_model.h"
 
 MutationModel::MutationModel(const VCF::Variant& str_variant,
 			     MutationPriors& priors,
-			     const Options& options) {
+			     const Options& options, const bool& dummy_models) {
   combine_alleles = options.combine_alleles;
   round_alleles = options.round_alleles;
   if (options.combine_alleles) {
-    assert(str_variant.num_alleles_by_length(options.round_alleles) > 1);
-    log_mut_prior_ = -log10(2) - log10(str_variant.num_alleles_by_length(options.round_alleles)-1);
+    if (!dummy_models) {
+      assert(str_variant.num_alleles_by_length(options.round_alleles) > 1);
+      log_mut_prior_ = -log10(2) - log10(str_variant.num_alleles_by_length(options.round_alleles)-1);
+    }
     std::string chrom = str_variant.get_chromosome();
     int32_t start;
     str_variant.get_INFO_value_single_int("START", start);
@@ -38,11 +42,13 @@ MutationModel::MutationModel(const VCF::Variant& str_variant,
     str_variant.get_INFO_value_single_int("PERIOD", period);
     ref_allele_size = str_variant.GetSizeFromLengthAllele(0);
   } else {
-    assert(str_variant.num_alleles() > 1);
+    if (! dummy_models) {
+      assert(str_variant.num_alleles() > 1);
     
-    // The allele on each haplotype can mutate to N-1 alleles, so assuming a 
-    // uniform prior each mutation has a prior of 1/(2*(N-1))
-    log_mut_prior_ = -log10(2) - log10(str_variant.num_alleles()-1);
+      // The allele on each haplotype can mutate to N-1 alleles, so assuming a 
+      // uniform prior each mutation has a prior of 1/(2*(N-1))
+      log_mut_prior_ = -log10(2) - log10(str_variant.num_alleles()-1);
+    }
   } 
 }
 
@@ -58,18 +64,28 @@ double MutationModel::log_prior_mutation(const int& parental_allele, const int& 
   int parental_allele_centered = (parental_allele)/period - central_allele;
   int child_allele_centered = (child_allele)/period - central_allele;
   double up_prob = (1-beta*geomp*parental_allele_centered)/2;
+  if (up_prob > 1) {
+    up_prob = 0.9999; // boundary state
+    PrintMessageDieOnError("Encountered boundary allele " + std::to_string(parental_allele_centered), M_ERROR);
+  }
   int k = child_allele_centered - parental_allele_centered;
+  double logp;
   if (k == 0 && !round_alleles) {
     // Happens for non-unit mutations that round to same unit size
     k = (child_allele-parental_allele > 0) ? 1 : -1;
   }
   if (k > 0) {
-    return log10(up_prob*geomp*pow(1-geomp, k-1));
+    logp = log10(up_prob*geomp*pow(1-geomp, k-1));
   } else if (k < 0) {
-    return log10((1-up_prob)*geomp*pow(1-geomp, -1*k-1));
+    logp = log10((1-up_prob)*geomp*pow(1-geomp, -1*k-1));
   } else {
     PrintMessageDieOnError("Encountered mutation of length 0", M_ERROR);
   }
+  if (isnan(logp)) {
+    //    std::cerr << k << " " << up_prob << " " << beta << " " << geomp << " " << parental_allele_centered <<  std::endl;
+    PrintMessageDieOnError("Encountered nan mutation prob", M_ERROR);
+  }
+  return logp;
 }
 
 double MutationModel::max_log_prior_mutation(const int& parental_allele) {

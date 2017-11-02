@@ -84,8 +84,9 @@ class UnphasedGL : public GL {
 
  public:
   explicit UnphasedGL(const VCF::Variant& variant,
-		      const Options& options): options_(options) {
-    if (options_.combine_alleles) {
+		      const Options& options,
+		      const bool& dummy_models): options_(options) {
+    if (options_.combine_alleles || dummy_models) {
       return; // don't waste our time
     }
     if (!variant.has_format_field(UNPHASED_GL_KEY))
@@ -118,7 +119,11 @@ class UnphasedLengthGL : public GL {
 
  public:
   explicit UnphasedLengthGL(const VCF::Variant& variant,
-			    const Options& options): options_(options) {
+			    const Options& options,
+			    const bool& dummy_models): options_(options) {
+    if (dummy_models) {
+      return;
+    }
     if (!variant.has_format_field(UNPHASED_GL_KEY))
       PrintMessageDieOnError("Required FORMAT field " + UNPHASED_GL_KEY + " not present in VCF", M_ERROR);
     if (!build(variant))

@@ -56,6 +56,7 @@ class Options {
   bool combine_alleles;
   bool round_alleles;
   double posterior_threshold;
+  bool include_invariant;
 
   // Other options
   bool verbose;

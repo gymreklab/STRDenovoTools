@@ -71,6 +71,7 @@ void show_help() {
 	   << "--round-alleles             Round allele lengths to nearest repeat unit. \n"
 	   << "--use-pop-priors            Get genotype priors from population. \n"
 	   << "--posterior-threshold <FLOAT>  Cutoff to call something de novo. \n"
+	   << "--include-invariant         Output info for loci even if no alt alleles present.\n"
 	   << "********* Filtering loci ***********************\n"
 	   << "--output-all-loci           Output all loci to mutations file regardless of score.\n"
 	   << "********* Other options ************************\n"
@@ -91,6 +92,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_FAM,
     OPT_FAMILY,
     OPT_HELP,
+    OPT_INCLUDEINVARIANT,
     OPT_MAXNUMALLELES,
     OPT_MINCOVERAGE,
     OPT_MINSCORE,
@@ -119,6 +121,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"fam", 1, 0, OPT_FAM},
     {"family", 1, 0, OPT_FAMILY},
     {"help", 0, 0, OPT_HELP},
+    {"include-invariant", 0, 0, OPT_INCLUDEINVARIANT},
     {"max-num-alleles", 1, 0, OPT_MAXNUMALLELES},
     {"min-coverage", 1, 0, OPT_MINCOVERAGE},
     {"min-score", 1, 0, OPT_MINSCORE},
@@ -169,6 +172,9 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     case OPT_HELP:
     case 'h':
       show_help();
+    case OPT_INCLUDEINVARIANT:
+      options->include_invariant++;
+      break;
     case OPT_MAXNUMALLELES:
       options->max_num_alleles = atoi(optarg);
       break;
