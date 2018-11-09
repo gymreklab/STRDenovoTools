@@ -77,6 +77,7 @@ void show_help() {
 	   << "********* Other options ************************\n"
 	   << "-h,--help      display this help screen\n"
 	   << "-v,--verbose   print out useful progress messages\n"
+	   << "--debug        print out lots of debugging messages\n"
 	   << "--version      print out the version of this software\n\n";
   cerr << help_msg.str();
   exit(1);
@@ -85,6 +86,7 @@ void show_help() {
 void parse_commandline_options(int argc, char* argv[], Options* options) {
   enum LONG_OPTIONS {
     OPT_COMBINEALLELES,
+    OPT_DEBUG,
     OPT_DEFAULTPRIOR,
     OPT_DEFAULTBETA,
     OPT_DEFAULTPGEOM,
@@ -114,6 +116,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
   };
   static struct option long_options[] = {
     {"combine-alleles-by-length", 0, 0, OPT_COMBINEALLELES},
+    {"debug", 0, 0, OPT_DEBUG},
     {"default-prior", 1, 0, OPT_DEFAULTPRIOR},
     {"default-beta", 1, 0, OPT_DEFAULTBETA},
     {"default-pgeom", 1, 0, OPT_DEFAULTPGEOM},
@@ -150,6 +153,9 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     switch (ch) {
     case OPT_COMBINEALLELES:
       options->combine_alleles++;
+      break;
+    case OPT_DEBUG:
+      options->debug++;
       break;
     case OPT_DEFAULTPRIOR:
       options->default_prior = atof(optarg);
@@ -284,11 +290,13 @@ int main(int argc, char* argv[]) {
   pedigree_set.PrintStatus();
 
   // Set up priors
+  PrintMessageDieOnError("Opening priors file...", M_PROGRESS);
   MutationPriors priors(options.default_prior, options.default_beta,
 			options.default_pgeom, options.default_central,
 			options.priors_file);
 
   // Run denovo analysis, based on trios
+  PrintMessageDieOnError("Running de novo analysis...", M_PROGRESS);
   TrioDenovoScanner denovo_scanner(pedigree_set, options);
   denovo_scanner.scan(strvcf, priors);
 

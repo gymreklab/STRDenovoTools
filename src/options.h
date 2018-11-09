@@ -73,6 +73,9 @@ class Options {
   double default_beta;
   double default_pgeom;
   int default_central;
+
+  // debugging
+  bool debug;
 };
 
 #endif  // SRC_OPTIONS_H__

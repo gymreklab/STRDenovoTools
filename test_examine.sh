@@ -5,7 +5,7 @@ start=$2
 family=$3
 
 ./src/ExamineDenovo \
-    --strvcf /storage/s1saini/hipstr_rerun/chr${chrom}/hipstr.chr${chrom}.with.1kg.vcf.gz \
+    --strvcf /storage/mgymrek/ssc-imputation/filtered_vcfs/hipstr.chr${chrom}.allfilters.vcf.gz \
     --fam /home/mgymrek/workspace/ssc-imputation/denovos/pedigree.fam \
     --locus ${chrom}:${start} \
     --family ${family}

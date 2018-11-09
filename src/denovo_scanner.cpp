@@ -43,13 +43,15 @@ TrioDenovoScanner::~TrioDenovoScanner() {
 
 void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 			     MutationPriors& priors) {
+  if (options_.debug) PrintMessageDieOnError("Scanning for de novos...", M_PROGRESS);
   VCF::Variant str_variant;
   std::vector<NuclearFamily> families = pedigree_set_.get_families();
   std::vector<DenovoResult> denovo_results;
   while (strvcf.get_next_variant(&str_variant, options_.round_alleles)) {
+    // Clear leftovers
     denovo_results.clear();
+    // Get locus info
     bool dummy_models = false; // Use if only 1 allele but still including
-    // Initial checks
     int num_alleles = str_variant.num_alleles();
     if (options_.combine_alleles) {
       num_alleles = str_variant.num_alleles_by_length(options_.round_alleles);
@@ -62,15 +64,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 	continue;
       }
     }
-    if (str_variant.num_samples() == str_variant.num_missing()) {
-      str_variant.destroy_record();
-      continue;
-    }
-    if (num_alleles > options_.max_num_alleles) {
-      str_variant.destroy_record();
-      continue;
-    }
-    // Get locus info
+    if (options_.debug) PrintMessageDieOnError("Getting locus info...", M_PROGRESS);
     int32_t start; str_variant.get_INFO_value_single_int(START_KEY, start);
     int32_t end; str_variant.get_INFO_value_single_int(END_KEY, end);
     int32_t period; str_variant.get_INFO_value_single_int(PERIOD_KEY, period);
@@ -85,21 +79,38 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
       ss << " Total allele seqs: " << str_variant.num_alleles();
     }
     PrintMessageDieOnError(ss.str(), M_PROGRESS);
+    if (options_.debug)  PrintMessageDieOnError("Checking if we have any samples...", M_PROGRESS);
+    if (str_variant.num_samples() == str_variant.num_missing()) {
+      std::stringstream ss;
+      ss << "Found " << str_variant.num_samples() << " missing: " << str_variant.num_missing() << endl;
+      if (options_.debug) PrintMessageDieOnError(ss.str(), M_PROGRESS);
+      str_variant.destroy_record();
+      continue;
+    }
+    if (options_.debug) PrintMessageDieOnError("Checking if we have too many alleles...", M_PROGRESS);
+    if (num_alleles > options_.max_num_alleles) {
+      str_variant.destroy_record();
+      continue;
+    }
 
     // Set up
+    if (options_.debug) PrintMessageDieOnError("Set up GLs...", M_PROGRESS);
     GL* unphased_gls;
     UnphasedLengthGL unphased_length_gls(str_variant, options_, dummy_models);
     UnphasedGL unphased_seq_gls(str_variant, options_, dummy_models);
     MutationModel mut_model(str_variant, priors, options_, dummy_models);
     DiploidGenotypePrior* dip_gt_priors;
     if (options_.combine_alleles) {
+      if (options_.debug) PrintMessageDieOnError("Set up length GLs...", M_PROGRESS);
       //unphased_gls = new UnphasedLengthGL(str_variant, options_);
       unphased_gls = &unphased_length_gls;
+      if (options_.debug) PrintMessageDieOnError("Set up priors...", M_PROGRESS);
       if (options_.use_pop_priors) {
 	dip_gt_priors = new PopulationGenotypeLengthPrior(str_variant, families, options_.round_alleles);
       } else {
 	dip_gt_priors = new UniformGenotypeLengthPrior(str_variant, families, options_.round_alleles);
       }
+      if (options_.debug) PrintMessageDieOnError("Done setting up priors...", M_PROGRESS);
     } else {
       //unphased_gls = new UnphasedGL(str_variant, options_);
       unphased_gls = &unphased_seq_gls;
@@ -114,6 +125,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
     const double LOG_TWO        = log10(2);
 
     // Scan each family
+    if (options_.debug) PrintMessageDieOnError("Scanning families...", M_PROGRESS);
     for (auto family_iter = families.begin(); family_iter != families.end(); family_iter++) {
       if (!options_.family.empty() and family_iter->get_family_id() != options_.family) {
 	continue;
@@ -124,27 +136,50 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
       } else {
 	scan_for_denovo = unphased_gls->has_sample(family_iter->get_mother()) && unphased_gls->has_sample(family_iter->get_father());
       }
-      if (options_.require_all_children) {
-	for (auto child_iter = family_iter->get_children().begin();
-	     child_iter != family_iter->get_children().end(); child_iter++) {
-	  if (dummy_models) {
+      if (options_.debug) PrintMessageDieOnError("Check children...", M_PROGRESS);
+      int num_children_nonmissing = 0;
+
+      ss.str("");
+      ss << "Before checking children, Scan for de novo=" << scan_for_denovo << " "
+	 << "Mother has data=" << unphased_gls->has_sample(family_iter->get_mother()) << " " << family_iter->get_mother() << " "
+	 << "Father has data=" << unphased_gls->has_sample(family_iter->get_father()) << " " << family_iter->get_father();
+      if (options_.debug) PrintMessageDieOnError(ss.str(), M_PROGRESS);
+      for (auto child_iter = family_iter->get_children().begin();
+	   child_iter != family_iter->get_children().end(); child_iter++) {
+	if (dummy_models) {
+	  if (options_.require_all_children) {
 	    scan_for_denovo = scan_for_denovo && !str_variant.sample_call_missing(*child_iter);
-	  } else {
+	  }
+	  if (!str_variant.sample_call_missing(*child_iter)) {
+	    num_children_nonmissing += 1;
+	  }
+	} else {
+	  if (options_.require_all_children) {
 	    scan_for_denovo = scan_for_denovo && unphased_gls->has_sample(*child_iter);
+	  }
+	  if (unphased_gls->has_sample(*child_iter)) {
+	    num_children_nonmissing += 1;
 	  }
 	}
       }
+      ss.str("");
+      ss << "Found " << num_children_nonmissing << " nonmissing children . Scanning for de novo=" << scan_for_denovo;
+      if (options_.debug) PrintMessageDieOnError(ss.str(), M_PROGRESS);
+      scan_for_denovo = scan_for_denovo && (num_children_nonmissing > 0);
 
       // Scan each child in the family
       for (auto child_iter = family_iter->get_children().begin(); child_iter != family_iter->get_children().end(); child_iter++) {
 	double total_ll_no_mutation, total_ll_one_denovo;
+	if (options_.debug) PrintMessageDieOnError("Scanning child...", M_PROGRESS);
 	if (dummy_models) {
+	  if (options_.debug) PrintMessageDieOnError("Inside dummy...", M_PROGRESS);
 	  if (!scan_for_denovo) {
 	    continue;
 	  }
 	  total_ll_no_mutation = 0;
 	  total_ll_one_denovo = -DBL_MAX/2;
 	} else {
+	  if (options_.debug) PrintMessageDieOnError("Checking child...", M_PROGRESS);
 	  if (!scan_for_denovo || !unphased_gls->has_sample(*child_iter)) {
 	    continue;
 	  }
@@ -155,10 +190,12 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 	  double MIN_CONTRIBUTION   = 4 + 3*log10(num_alleles) + 2*log(num_alleles+1) + LOG_TWO;
 	  double ll_no_mutation_max = -DBL_MAX/2, ll_no_mutation_total = 0.0;
 	  double ll_one_denovo_max  = -DBL_MAX/2, ll_one_denovo_total  = 0.0;
+	  if (options_.debug) PrintMessageDieOnError("Get GL indices...", M_PROGRESS);
 	  int mother_gl_index       = unphased_gls->get_sample_index(family_iter->get_mother());
 	  int father_gl_index       = unphased_gls->get_sample_index(family_iter->get_father());
 	  int child_gl_index        = unphased_gls->get_sample_index(*child_iter);
 	  // Iterate over all maternal genotypes
+	  if (options_.debug) PrintMessageDieOnError("Compute likelihoods...", M_PROGRESS);
 	  for (int mat_i = 0; mat_i < num_alleles; mat_i++){
 	    for (int mat_j = 0; mat_j <= mat_i; mat_j++){
 	      double mat_ll = dip_gt_priors->log_unphased_genotype_prior(mat_j, mat_i, family_iter->get_mother()) + unphased_gls->get_gl(mother_gl_index, mat_j, mat_i);
@@ -220,15 +257,18 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 	DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(),
 			 (*child_iter), family_iter->get_child_phenotype(*child_iter),
 			 total_ll_no_mutation, total_ll_one_denovo, prior_rate);
+	if (options_.debug) PrintMessageDieOnError("Adding dnr result", M_PROGRESS);
 	denovo_results.push_back(dnr);
       }
     }
     summarize_results(denovo_results, str_variant);
+    if (options_.debug) PrintMessageDieOnError("Done summarizing...", M_PROGRESS);    
     delete dip_gt_priors;
     denovo_results.clear();
-    
+
     // Destroy vcf_record_ from variant
     str_variant.destroy_record();
+    if (options_.debug) PrintMessageDieOnError("Destroy...", M_PROGRESS);
   }
 }
 
@@ -404,13 +444,15 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   if (dnr.empty()) {
     stringstream ss;
     ss << " Skipping - no called children";
-    PrintMessageDieOnError(ss.str(), M_WARNING);
+    if (options_.debug) PrintMessageDieOnError(ss.str(), M_WARNING);
     return;
   }
+  if (options_.debug) PrintMessageDieOnError("Get locus info...", M_PROGRESS);
   // Get locus sinfo
   int32_t start; str_variant.get_INFO_value_single_int(START_KEY, start);
   int32_t end; str_variant.get_INFO_value_single_int(END_KEY, end);
   int32_t period; str_variant.get_INFO_value_single_int(PERIOD_KEY, period);
+  if (options_.debug) PrintMessageDieOnError("Get mutation info...", M_PROGRESS);
   // Get mutation info
   int total_children = 0;
   int total_unaffected = 0;

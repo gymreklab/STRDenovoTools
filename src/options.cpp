@@ -51,6 +51,8 @@ Options::Options() {
   default_beta = 0.0;
   default_pgeom = 1.0;
   default_central = 0;
+
+  debug = false;
 }
 
 Options::~Options() {}

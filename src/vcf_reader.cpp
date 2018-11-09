@@ -108,14 +108,18 @@ namespace VCF {
     length_allele_sizes_[0] = 0;
     gt_to_length_index_[0] = 0;
     int max_index = 0;
-    // Go through rest of alleles
-    int allele_size = (int)alleles[1].size() - ref_allele_size;
-    if (round_alleles) {
-      allele_size = round_allele_length(allele_size);
-    }
+    // Go through rest of alleles.
     int allele_index = 1;
-    if (allele_size == 0) {
-      allele_index = 0;
+    int allele_size;
+    // First check the first one
+    if (alleles.size() > 1) {
+      allele_size = (int)alleles[1].size() - ref_allele_size;
+      if (round_alleles) {
+	allele_size = round_allele_length(allele_size);
+      }
+      if (allele_size == 0) {
+	allele_index = 0;
+      }
     }
     int prev_index = 0; // Only gets set when we encounter ref allele
     for (int i = 1; i < alleles.size(); i++) {

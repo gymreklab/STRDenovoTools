@@ -72,8 +72,18 @@ void PedigreeSet::PrintStatus() {
   int unaffected = 0;
   int affected = 0;
   int unknown = 0;
+  stringstream ss;
   for (auto fam_iter = families.begin(); fam_iter != families.end(); fam_iter++) {
     std::vector<int> children_status = fam_iter->GetChildrenStatus();
+    std::vector<std::string> children = fam_iter->get_children();
+    ss << "Family=" << fam_iter->get_family_id() << " "
+       << "Mother=" << fam_iter->get_mother() << " "
+       << "Father=" << fam_iter->get_father() << " ";
+    for (auto child_iter = children.begin(); 
+	 child_iter != children.end(); child_iter++) {
+      ss << "Child=" << *child_iter << " " ;
+    }
+    PrintMessageDieOnError(ss.str(), M_PROGRESS);
     for (auto child_iter = children_status.begin();
 	 child_iter != children_status.end();
 	 child_iter++) {
@@ -86,7 +96,7 @@ void PedigreeSet::PrintStatus() {
       }
     }
   }
-  stringstream ss;
+  ss.str("");
   ss << "PedigreeSet has " << families.size() << " nuclear families with STR data. " << endl
      << "  Unaffected children: " << unaffected << endl
      << "  Affected children: " << affected << endl
