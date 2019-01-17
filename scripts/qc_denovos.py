@@ -35,8 +35,9 @@ def main():
     # Exclude dn STRs where mutation size is not multiple of period
     if args.STEP_SIZE:
         mutations["unit"] = mutations["mutsize"]%mutations["period"] == 0
-        mutations = mutations[mutations.unit]
         n_step_removed = len(mutations[~mutations.unit])
+        mutations = mutations[mutations.unit]
+        
 
     # Exclude dn STRs based on posterior threshold
     if args.POSTERIOR_THRESH > 0:
