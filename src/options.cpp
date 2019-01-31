@@ -26,6 +26,7 @@ Options::Options() {
   famfile = "";
   outprefix = "";
   priors_file = "";
+  gangstr = false;
   outputall = false;
   combine_alleles = false;
   round_alleles = false;

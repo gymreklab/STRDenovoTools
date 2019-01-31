@@ -36,7 +36,7 @@ class DiploidGenotypePrior {
   std::vector<double> allele_freqs_, log_allele_freqs_;
   double LOG_2;
 
-  DiploidGenotypePrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families){
+  DiploidGenotypePrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families) {
     num_alleles_ = str_variant.num_alleles();
     assert(num_alleles_ > 0);
     LOG_2 = log10(2);
@@ -75,8 +75,8 @@ class PopulationGenotypePrior : public DiploidGenotypePrior {
   void compute_allele_freqs(VCF::Variant& variant, std::vector<NuclearFamily>& families);
 
  public:
- PopulationGenotypePrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families)
-    : DiploidGenotypePrior(str_variant, families){
+  PopulationGenotypePrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families)
+   : DiploidGenotypePrior(str_variant, families){
     compute_allele_freqs(str_variant, families);
   }
 };
@@ -91,8 +91,11 @@ class UniformGenotypePrior : public DiploidGenotypePrior {
   void compute_allele_freqs(VCF::Variant& variant, std::vector<NuclearFamily>& families);
 
  public:
-  UniformGenotypePrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families)
-    : DiploidGenotypePrior(str_variant, families){
+ UniformGenotypePrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families, bool gangstr)
+   : DiploidGenotypePrior(str_variant, families){
+    if (gangstr) {
+      num_alleles_ = str_variant.num_gangstr_alleles();
+    }
     compute_allele_freqs(str_variant, families);
   }
 };
@@ -106,7 +109,7 @@ class PopulationGenotypeLengthPrior : public DiploidGenotypePrior {
 
  public:
  PopulationGenotypeLengthPrior(VCF::Variant& str_variant, std::vector<NuclearFamily>& families, const bool& round)
-    : DiploidGenotypePrior(str_variant, families){
+   : DiploidGenotypePrior(str_variant, families){
     num_alleles_ = str_variant.num_alleles_by_length(round);
     compute_allele_freqs(str_variant, families);
   }

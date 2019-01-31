@@ -47,6 +47,7 @@ void show_help() {
 	   << " --fam <pedigree file>"
 	   << " --out <outprefix>"
 	   << "\n\nOptions:\n"
+	   << " --gangstr                 Indicates input VCF is from GangSTR\n"
 	   << "********* Mutation model ***********************\n"
 	   << "--default-prior <FLOAT>    Default log10 mutation rate to use as prior\n"
 	   << "--default-beta <FLOAT>     Default value to use for length constraint\n"
@@ -93,6 +94,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_DEFAULTCENTRAL,
     OPT_FAM,
     OPT_FAMILY,
+    OPT_GANGSTR,
     OPT_HELP,
     OPT_INCLUDEINVARIANT,
     OPT_MAXNUMALLELES,
@@ -123,6 +125,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"default-central", 1, 0, OPT_DEFAULTCENTRAL},
     {"fam", 1, 0, OPT_FAM},
     {"family", 1, 0, OPT_FAMILY},
+    {"gangstr", 0, 0, OPT_GANGSTR},
     {"help", 0, 0, OPT_HELP},
     {"include-invariant", 0, 0, OPT_INCLUDEINVARIANT},
     {"max-num-alleles", 1, 0, OPT_MAXNUMALLELES},
@@ -152,10 +155,10 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
   while (ch != -1) {
     switch (ch) {
     case OPT_COMBINEALLELES:
-      options->combine_alleles++;
+      options->combine_alleles = true;
       break;
     case OPT_DEBUG:
-      options->debug++;
+      options->debug = true;
       break;
     case OPT_DEFAULTPRIOR:
       options->default_prior = atof(optarg);
@@ -175,11 +178,14 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     case OPT_FAMILY:
       options->family = optarg;
       break;
+    case OPT_GANGSTR:
+      options->gangstr = true;
+      break;
     case OPT_HELP:
     case 'h':
       show_help();
     case OPT_INCLUDEINVARIANT:
-      options->include_invariant++;
+      options->include_invariant = true;
       break;
     case OPT_MAXNUMALLELES:
       options->max_num_alleles = atoi(optarg);
@@ -200,7 +206,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
       options->outprefix = optarg;
       break;
     case OPT_OUTPUTALL:
-      options->outputall++;
+      options->outputall = true;
       break;
     case OPT_PERIOD:
       options->period = atoi(optarg);
@@ -215,23 +221,23 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
       options->region = optarg;
       break;
     case OPT_REQUIREALLCHILDREN:
-      options->require_all_children++;
+      options->require_all_children = true;
       break;
     case OPT_REQUIRENUMCHILDREN:
       options->require_num_children = atoi(optarg);
       break;
     case OPT_ROUNDALLELES:
-      options->round_alleles++;
+      options->round_alleles = true;
       break;
     case OPT_STRVCF:
       options->strvcf = optarg;
       break;
     case OPT_USEPOPPRIORS:
-      options->use_pop_priors++;
+      options->use_pop_priors = true;
       break;
     case OPT_VERBOSE:
     case 'v':
-      options->verbose++;
+      options->verbose = true;
       break;
     case OPT_VERSION:
       cerr << _GIT_VERSION << endl;
@@ -266,6 +272,14 @@ int main(int argc, char* argv[]) {
   Options options;
   parse_commandline_options(argc, argv, &options);
 
+  // Check some options
+  if (options.gangstr) {
+    if (options.combine_alleles) {
+      PrintMessageDieOnError("combine-alleles ignored for GangSTR files", M_WARNING);
+      options.combine_alleles = false;
+    }
+    // TODO other command line items we need to check for gangstr
+  }
   // Load STR VCF file
   if (!file_exists(options.strvcf)) {
     PrintMessageDieOnError("STR vcf file " + options.strvcf + " does not exist.", M_ERROR);
