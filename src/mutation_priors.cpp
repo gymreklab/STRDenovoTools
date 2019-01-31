@@ -32,7 +32,9 @@ MutationPriors::MutationPriors(const double& _default_prior,
   default_beta = _default_beta;
   default_geomp = _default_pgeom;
   default_central = _default_central;
-  LoadPriors(_priors_file);
+  if (!_priors_file.empty()) {
+    LoadPriors(_priors_file);
+  }
 }
 
 double MutationPriors::GetPrior(const std::string& chrom, const int32_t& start) {

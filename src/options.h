@@ -35,6 +35,7 @@ class Options {
   std::string famfile;
   std::string outprefix;
   std::string priors_file;
+  bool gangstr;
 
   // Filtering samples
   int require_num_children;

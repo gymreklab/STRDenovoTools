@@ -188,8 +188,9 @@ bool PedigreeGraph::build(const std::string& filename) {
   while (std::getline(input, line)){
     std::istringstream iss(line);
     std::string family, child, father, mother, sex, phenotype;
-    if(! (iss >> family >> child >> father >> mother >> sex >> phenotype))
+    if(! (iss >> family >> child >> father >> mother >> sex >> phenotype)) {
       PrintMessageDieOnError("Improperly formated .ped pedigree file " + filename, M_ERROR);
+    }
 
     if (child.compare("0") == 0)
       PrintMessageDieOnError("Invalid individual id " + child, M_ERROR);

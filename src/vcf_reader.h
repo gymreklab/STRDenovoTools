@@ -83,6 +83,7 @@ namespace VCF {
     const std::string& get_allele(int allele)     const { return alleles_[allele]; }
     const std::vector<std::string>& get_samples() const;
     int num_alleles() const { return alleles_.size(); }
+    int num_gangstr_alleles() const;
     int num_samples() const { return num_samples_;    }
     int num_missing() const { return num_missing_;    }
     int num_alleles_by_length(const bool& round_alleles) const;

@@ -24,6 +24,8 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "vcf_reader.h"
 
+std::string GRID_INFO_TAG         = "GRID";
+
 namespace VCF {
 
   const std::vector<std::string>& Variant::get_samples() const {
@@ -95,6 +97,18 @@ namespace VCF {
       x += p*p;
     }
     return 1-x; 
+  }
+
+  int Variant::num_gangstr_alleles() const {
+    std::vector<std::int32_t> grid_vals;
+    if (!has_info_field(GRID_INFO_TAG)) {
+      PrintMessageDieOnError("Required INFO field " + GRID_INFO_TAG + " not present in VCF", M_ERROR);
+    }
+    get_INFO_value_multiple_ints(GRID_INFO_TAG, grid_vals);
+    if (grid_vals.size() != 2) {
+      PrintMessageDieOnError("Inproperly formatted GRID field. Should have 2 values", M_ERROR);
+    }
+    return grid_vals[1]-grid_vals[0]+1;
   }
 
   void Variant::build_alleles_by_length(const bool& round_alleles) {

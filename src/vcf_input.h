@@ -32,6 +32,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 extern const std::string GENOTYPE_KEY;
 extern const std::string UNPHASED_GL_KEY;
+extern const std::string GANGSTR_GL_KEY;
 extern const std::string PHASED_GL_KEY;
 extern const std::string COVERAGE_KEY;
 extern const std::string SCORE_KEY;
@@ -74,6 +75,41 @@ class GL {
   virtual float get_max_gl_allele_fixed(int sample_index, int gt_a) const = 0;
 };
 
+class GangSTRGL : public GL {
+ private:
+  std::vector< std::vector<float> > unphased_gls_;
+  std::vector< std::vector<float> > max_gls_;
+
+  bool build(const VCF::Variant& variant);
+  Options options_;
+
+ public:
+  explicit GangSTRGL(const VCF::Variant& variant,
+		     const Options& options,
+		     const bool& dummy_models): options_(options) {
+    if (dummy_models || !options.gangstr) {
+      return; // don't waste our time
+    }
+    if (!variant.has_format_field(GANGSTR_GL_KEY))
+      PrintMessageDieOnError("Required FORMAT field " + GANGSTR_GL_KEY + " not present in VCF", M_ERROR);
+    if (!build(variant))
+      PrintMessageDieOnError("Failed to construct GangSTRGL instance from VCF record", M_ERROR);
+  }
+
+  float get_gl(int sample_index, int min_gt, int max_gt) const {
+    assert(min_gt <= max_gt);
+    return unphased_gls_[sample_index][max_gt*(max_gt+1)/2 + min_gt];
+  }
+
+  /*
+   * For the relevant sample, returns the maximum unphased GL of all genotypes
+   * that contain GT_A as an allele
+   */
+  float get_max_gl_allele_fixed(int sample_index, int gt_a) const {
+    return max_gls_[sample_index][gt_a];
+  }
+};
+
 class UnphasedGL : public GL {
  private:
   std::vector< std::vector<float> > unphased_gls_;
@@ -86,7 +122,7 @@ class UnphasedGL : public GL {
   explicit UnphasedGL(const VCF::Variant& variant,
 		      const Options& options,
 		      const bool& dummy_models): options_(options) {
-    if (options_.combine_alleles || dummy_models) {
+    if (options_.combine_alleles || dummy_models || options.gangstr) {
       return; // don't waste our time
     }
     if (!variant.has_format_field(UNPHASED_GL_KEY))
@@ -121,8 +157,8 @@ class UnphasedLengthGL : public GL {
   explicit UnphasedLengthGL(const VCF::Variant& variant,
 			    const Options& options,
 			    const bool& dummy_models): options_(options) {
-    if (dummy_models) {
-      return;
+    if (dummy_models || options.gangstr) {
+      return;  // don't waste our time
     }
     if (!variant.has_format_field(UNPHASED_GL_KEY))
       PrintMessageDieOnError("Required FORMAT field " + UNPHASED_GL_KEY + " not present in VCF", M_ERROR);

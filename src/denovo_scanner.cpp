@@ -56,6 +56,9 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
     if (options_.combine_alleles) {
       num_alleles = str_variant.num_alleles_by_length(options_.round_alleles);
     }
+    if (options_.gangstr) {
+      num_alleles = str_variant.num_gangstr_alleles();
+    }
     if (num_alleles <= 1) {
       if (options_.include_invariant && num_alleles == 1) {
 	dummy_models = true;
@@ -65,7 +68,12 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
       }
     }
     if (options_.debug) PrintMessageDieOnError("Getting locus info...", M_PROGRESS);
-    int32_t start; str_variant.get_INFO_value_single_int(START_KEY, start);
+    int32_t start;
+    if (options_.gangstr) {
+      start = str_variant.get_position();
+    } else {
+      str_variant.get_INFO_value_single_int(START_KEY, start);
+    }
     int32_t end; str_variant.get_INFO_value_single_int(END_KEY, end);
     int32_t period; str_variant.get_INFO_value_single_int(PERIOD_KEY, period);
     if (options_.period != 0 && period != options_.period) {
@@ -98,26 +106,27 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
     GL* unphased_gls;
     UnphasedLengthGL unphased_length_gls(str_variant, options_, dummy_models);
     UnphasedGL unphased_seq_gls(str_variant, options_, dummy_models);
+    GangSTRGL gangstr_gls(str_variant, options_, dummy_models);
     MutationModel mut_model(str_variant, priors, options_, dummy_models);
     DiploidGenotypePrior* dip_gt_priors;
     if (options_.combine_alleles) {
       if (options_.debug) PrintMessageDieOnError("Set up length GLs...", M_PROGRESS);
-      //unphased_gls = new UnphasedLengthGL(str_variant, options_);
       unphased_gls = &unphased_length_gls;
-      if (options_.debug) PrintMessageDieOnError("Set up priors...", M_PROGRESS);
       if (options_.use_pop_priors) {
 	dip_gt_priors = new PopulationGenotypeLengthPrior(str_variant, families, options_.round_alleles);
       } else {
 	dip_gt_priors = new UniformGenotypeLengthPrior(str_variant, families, options_.round_alleles);
       }
       if (options_.debug) PrintMessageDieOnError("Done setting up priors...", M_PROGRESS);
+    } else if (options_.gangstr) {
+      unphased_gls = &gangstr_gls;
+      dip_gt_priors = new UniformGenotypePrior(str_variant, families, true); // TODO support priors for gangstr
     } else {
-      //unphased_gls = new UnphasedGL(str_variant, options_);
       unphased_gls = &unphased_seq_gls;
       if (options_.use_pop_priors) {
 	dip_gt_priors = new PopulationGenotypePrior(str_variant, families);
       } else {
-	dip_gt_priors = new UniformGenotypePrior(str_variant, families);
+	dip_gt_priors = new UniformGenotypePrior(str_variant, families, false);
       }
     }
     double prior_rate = priors.GetPrior(str_variant.get_chromosome(), start);
@@ -449,7 +458,12 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   }
   if (options_.debug) PrintMessageDieOnError("Get locus info...", M_PROGRESS);
   // Get locus sinfo
-  int32_t start; str_variant.get_INFO_value_single_int(START_KEY, start);
+  int32_t start;
+  if (options_.gangstr) {
+    start = str_variant.get_position();
+  } else {
+    str_variant.get_INFO_value_single_int(START_KEY, start);
+  }
   int32_t end; str_variant.get_INFO_value_single_int(END_KEY, end);
   int32_t period; str_variant.get_INFO_value_single_int(PERIOD_KEY, period);
   if (options_.debug) PrintMessageDieOnError("Get mutation info...", M_PROGRESS);
