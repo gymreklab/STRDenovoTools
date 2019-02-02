@@ -3,10 +3,8 @@
 GANGSTRFILE=/storage/resources/datasets/PlatinumGenomesDbGaP/gangstr/pathogenic_gangstr_012819_filtered.vcf.gz
 MUTMODEL=/storage/mgymrek/ssc-denovos/mutea-results/predicted_str_mutrates_GRCh37.bed
 
-MINCOV=10
-MINSCORE=0.9
-MINSPANCOV=10
-MINSUPPREADS=2
+MINCOV=1
+MINSCORE=0
 PTHRESH=0.8
 MAXALLELES=100
 

@@ -41,6 +41,11 @@ MutationModel::MutationModel(const VCF::Variant& str_variant,
     central_allele = priors.GetCentralAllele(chrom, start);
     str_variant.get_INFO_value_single_int("PERIOD", period);
     ref_allele_size = str_variant.GetSizeFromLengthAllele(0);
+  } else if (options.gangstr) {
+    if (! dummy_models) {
+      assert(str_variant.num_gangstr_alleles() > 1);
+      log_mut_prior_ = -log10(2) - log10(str_variant.num_gangstr_alleles()-1);
+    }
   } else {
     if (! dummy_models) {
       assert(str_variant.num_alleles() > 1);
