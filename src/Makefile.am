@@ -15,22 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
-HTS_LIBS = -Ilib/htslib -lhts
-NLOP_LIBS = -lnlopt -lm
+AM_CPPFLAGS = -I$(top_srcdir)/src/ -I$(top_srcdir) $(GSL_CFLAGS) $(HTSLIB_CFLAGS)
+AM_LDFLAGS = $(GSL_LIBS) $(HTSLIB_LIBS)
 
-AM_CPPFLAGS = -I$(top_srcdir) $(GSL_CFLAGS)
-AM_LDFLAGS = $(GSL_LIBS) $(NLOP_LIBS)
+bin_PROGRAMS = CookieMonSTR
 
-bin_PROGRAMS = STRDenovoTools ExamineDenovo
-noinst_LIBRARIES = libsdt.a
-
-libsdt_a_CPPFLAGS = $(AM_CPPFLAGS)
-libsdt_a_SOURCES = \
+CookieMonSTR_SOURCES = \
 	common.h common.cpp \
 	denovo_allele_priors.h denovo_allele_priors.cpp \
 	denovo_scanner.h denovo_scanner.cpp \
 	fastonebigheader.h \
 	locus_inspector.h locus_inspector.cpp \
+	main_sdt.cpp \
 	mathops.h mathops.cpp \
 	mutation_model.h mutation_model.cpp \
 	mutation_priors.h mutation_priors.cpp \
@@ -40,17 +36,8 @@ libsdt_a_SOURCES = \
 	vcf_input.h vcf_input.cpp \
 	vcf_reader.h vcf_reader.cpp
 
-STRDenovoTools_LDFLAGS = $(AM_LDFLAGS) $(HTS_LIBS)
-STRDenovoTools_SOURCES = main_sdt.cpp
-STRDenovoTools_CPPFLAGS = $(AM_CPPFLAGS)
-STRDenovoTools_CFLAGS = $(AM_CFLAGS)
-STRDenovoTools_CXXFLAGS = $(AM_CXXFLAGS)
-STRDenovoTools_LDADD = libsdt.a $(GSL_LIBS)
-
-ExamineDenovo_LDFLAGS = $(AM_LDFLAGS) $(HTS_LIBS)
-ExamineDenovo_SOURCES = main_examine.cpp
-ExamineDenovo_CPPFLAGS = $(AM_CPPFLAGS)
-ExamineDenovo_CFLAGS = $(AM_CFLAGS)
-ExamineDenovo_CXXFLAGS = $(AM_CXXFLAGS)
-ExamineDenovo_LDADD = libsdt.a $(GSL_LIBS)
-
+CookieMonSTR_CPPFLAGS = $(AM_CPPFLAGS)
+CookieMonSTR_CFLAGS = $(AM_CFLAGS)
+CookieMonSTR_CXXFLAGS = $(AM_CXXFLAGS)
+CookieMonSTR_LDFLAGS = $(AM_LDFLAGS) $(LT_LDFLAGS)
+CookieMonSTR_LDADD = $(AM_LDFLAGS) $(LT_LDFLAGS)

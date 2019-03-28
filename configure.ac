@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
-AC_INIT([STRDenovoTools], [1.0], [mgymrek@ucsd.edu])
+AC_INIT([CookieMonSTR], [1.0], [mgymrek@ucsd.edu])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 AC_PROG_CC
 AC_PROG_CXX
@@ -30,6 +30,7 @@ AC_SUBST(MACHTYPE)
 
 # Check for installed packages
 PKG_CHECK_MODULES([GSL],[gsl])
+PKG_CHECK_MODULES([HTSLIB],[htslib])
 
 # Custom Flags to add to CFLAGS/CXXFLAGS
 SDT_CFLAGS="-std=c++11 -D_GIT_VERSION=\"\\\"${GIT_VERSION}\\\"\" -D_MACHTYPE=\"\\\"${MACHTYPE}\\\"\""
@@ -41,6 +42,7 @@ CXXFLAGS="$CXXFLAGS $SDT_CFLAGS"
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT
-
+AC_MSG_RESULT([    HTSLIB_LIBS:  $HTSLIB_LIBS])
+AC_MSG_RESULT([    HTSLIB_CFLAGS: $HTSLIB_CFLAGS])
 AC_MSG_RESULT([    GSL_LIBS:  $GSL_LIBS])
 AC_MSG_RESULT([    GSL_CFLAGS:  $GSL_CFLAGS])
