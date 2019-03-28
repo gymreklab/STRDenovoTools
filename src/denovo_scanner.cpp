@@ -30,7 +30,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include "src/mutation_model.h"
 #include "src/vcf_input.h"
 
-#include "lib/htslib/htslib/kfunc.h"
+#include "htslib/kfunc.h"
 
 std::string TrioDenovoScanner::START_KEY   = "START";
 std::string TrioDenovoScanner::END_KEY     = "END";

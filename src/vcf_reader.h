@@ -26,13 +26,10 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <vector>
 
-extern "C" {
-#include "lib/htslib/htslib/bgzf.h" 
-#include "lib/htslib/htslib/tbx.h" 
-#include "lib/htslib/htslib/vcf.h" 
-}
-
 #include "src/common.h"
+#include "htslib/bgzf.h"
+#include "htslib/tbx.h"
+#include "htslib/vcf.h"
 
 namespace VCF {
 

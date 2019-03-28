@@ -1,0 +1,34 @@
+rm -f config.cache
+rm -f aclocal.m4
+rm -rf ./autom4te.cache
+
+check_program()
+{
+	PROG="$1"
+	# If the program is found in the $PATH, just return
+	which "$PROG" >/dev/null && return
+
+	# Otherwise, show an error with some helpful information
+	echo "
+--- CookieMonSTR Compilation Error ---
+You are trying to compile CookieMonSTR from a git repository.
+A required program '$PROG' was not found.
+To build CookieMonSTR from a git repository, the following programs are needed:
+   autoconf
+   automake
+   libtool
+   pkg-config
+   A C++ compiler
+As well as several libraries:
+   CPPUNIT, GSL
+---
+"
+	exit 1
+}
+
+for PROG in autoconf autoreconf automake libtool aclocal make ;
+do
+  check_program $PROG
+done
+
+autoreconf --force --install
