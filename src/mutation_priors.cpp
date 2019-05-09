@@ -91,7 +91,7 @@ void MutationPriors::LoadPriors(const std::string& priors_file) {
     if (start < 1)      PrintMessageDieOnError("Improperly formatted region file. \n Region has a START < 1, but START must be >= 1\n Bad line: " + line, M_ERROR);
     if (stop <= start)  PrintMessageDieOnError("Improperly formatted region file. \n Region has a STOP <= START. Bad line: " + line, M_ERROR);
     if (period < 1)     PrintMessageDieOnError("Improperly formatted region file. \n Region has a PERIOD < 1. Bad line: " + line, M_ERROR);
-    if (period > 9)     PrintMessageDieOnError("Improperly formatted region file. \n Region has a PERIOD > 9. Bad line: " + line, M_ERROR);
+    if (period > 99)     PrintMessageDieOnError("Improperly formatted region file. \n Region has a PERIOD > 99. Bad line: " + line, M_ERROR);
     std::pair <std::string, int32_t> locus(chrom, start);
     LocusParams lp;
     lp.log10mutrate = rate;
