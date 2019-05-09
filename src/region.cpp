@@ -32,7 +32,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 void readRegions(const std::string& input_file, uint32_t max_regions, const std::string& chrom_limit, std::vector<Region>& regions, std::ostream& logger){
   logger << "Reading region file " << input_file << std::endl;
   std::ifstream input(input_file.c_str());
-  if (!input.is_open()) 
+  if (!input.is_open())
     PrintMessageDieOnError("Failed to open region file", M_ERROR);
 
   regions.clear();
@@ -50,7 +50,7 @@ void readRegions(const std::string& input_file, uint32_t max_regions, const std:
     if (start < 1)      PrintMessageDieOnError("Improperly formatted region file. \n Region has a START < 1, but START must be >= 1\n Bad line: " + line, M_ERROR);
     if (stop <= start)  PrintMessageDieOnError("Improperly formatted region file. \n Region has a STOP <= START. Bad line: " + line, M_ERROR);
     if (period < 1)     PrintMessageDieOnError("Improperly formatted region file. \n Region has a PERIOD < 1. Bad line: " + line, M_ERROR);
-    if (period > 9)     PrintMessageDieOnError("Improperly formatted region file. \n Region has a PERIOD > 9. Bad line: " + line, M_ERROR);
+    if (period > 99)     PrintMessageDieOnError("Improperly formatted region file. \n Region has a PERIOD > 99. Bad line: " + line, M_ERROR);
 
     if (!chrom_limit.empty() && chrom.compare(chrom_limit) != 0)
       continue;
@@ -86,4 +86,4 @@ void orderRegions(std::vector<Region>& input_regions, std::vector< std::vector<R
   }
   for (unsigned int i = 0; i < output_regions.size(); i++)
     std::sort(output_regions[i].begin(), output_regions[i].end());
-} 
+}
