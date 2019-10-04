@@ -1,4 +1,4 @@
-FROM gymreklab/str-toolkit-2.4:latest
+FROM ileena/strtools:latest
 
 # Get necessary packages
 RUN apt-get install -qqy \
