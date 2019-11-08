@@ -53,7 +53,7 @@ class DenovoResult {
   const std::string& get_mother_id() const {return mother_id_;}
   const std::string& get_father_id() const {return father_id_;}
   const std::string& get_family_id() const {return family_id_;}
-  
+
  private:
   void CalculatePosterior();
   std::string family_id_;
@@ -81,13 +81,15 @@ class TrioDenovoScanner {
     : pedigree_set_(pedigree_set), options_(options),
     locus_summary_(options.outprefix + ".locus_summary.tab"),
     all_mutations_file_(options.outprefix + ".all_mutations.tab") {
-    locus_summary_ << "chrom\tpos\tend\tperiod\t"
+    locus_summary_ << "chrom\tpos\tend\tperiod\tref_allele_size\t"
 		   << "num_alleles_bylength\tnum_alleles_byseq\thet_by_length\thet_by_seq\t"
 		   << "total_children\ttotal_mutations\ttotal_mutation_rate\t"
 		   << "affected_children\taffected_mutations\taffected_new_mutations\taffected_mutation_rate\t"
 		   << "unaffected_children\tunaffected_mutations\tunaffected_new_mutations\tunaffected_mutation_rate\t"
 		   << "p-value\tchildren_with_mutations\n";
-    all_mutations_file_ << "chrom\tpos\tperiod\tprior\tfamily\tchild\tphenotype\tposterior\tnewallele\tmutsize\tinparents\tpoocase\tisnew\tcase_count\tctrl_count\tunk_count\n";
+    all_mutations_file_ << "chrom\tpos\tperiod\tprior\tfamily\tchild\tphenotype\t"
+       << "posterior\tnewallele\tmutsize\tinparents\tpoocase\tisnew\tcase_count\t"
+       << "ctrl_count\tunk_count\tchild_gt\tmat_gt\tpat_gt\n";
   }
   virtual ~TrioDenovoScanner();
 
@@ -112,8 +114,9 @@ class TrioDenovoScanner {
   void GetMutationInfo(const VCF::Variant& variant, const std::string& mother_id,
 		       const std::string& father_id, const std::string& child_id,
 		       std::string* new_allele, std::string* new_allele_raw, std::string* mut_size,
-		       bool* new_allele_in_parents, int* poocase);
-		       
+		       bool* new_allele_in_parents, int* poocase,
+           std::string* child_gt, std::string* mat_gt, std::string* pat_gt);
+
 };
 
 
