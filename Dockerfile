@@ -38,3 +38,12 @@ RUN ./configure
 RUN make
 RUN make install
 WORKDIR ..
+
+# Download, compile, and install Datamash
+RUN wget http://ftp.gnu.org/gnu/datamash/datamash-1.3.tar.gz
+RUN tar -xzf datamash-1.3.tar.gz
+WORKDIR datamash-1.3
+RUN ./configure
+RUN make
+RUN make check
+RUN make install
