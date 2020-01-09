@@ -43,11 +43,18 @@ bool file_exists(const std::string& path){
 void show_help() {
   std::stringstream help_msg;
   help_msg << "\nSTRDenovoTools [OPTIONS]"
-	   << " --str-vcf <STR VCF file>"
-	   << " --fam <pedigree file>"
-	   << " --out <outprefix>"
+	   << "--str-vcf <STR VCF file>"
+	   << "--fam <pedigree file>"
+	   << "--out <outprefix>"
 	   << "\n\nOptions:\n"
-	   << " --gangstr                 Indicates input VCF is from GangSTR\n"
+	   << "--gangstr                 Indicates input VCF is from GangSTR\n"
+	   << "********* Naive mutation calling ***************\n"
+	   << "--naive                    Use naive mutation calling based on hard calls.\n"
+	   << "                           Only works with GangSTR input.\n"
+	   << "--min-num-encl-child       Require this many enclosing reads supporting de novo allele.\n" 
+	   << "                           Only works with GangSTR input.\n"
+	   << "--max-num-encl-parent      Discard if more than this many enclosing reads \n"
+	   << "                           support de novo alele in parent. Only works with GangSTR input.\n"
 	   << "********* Mutation model ***********************\n"
 	   << "--default-prior <FLOAT>    Default log10 mutation rate to use as prior\n"
 	   << "--default-beta <FLOAT>     Default value to use for length constraint\n"
@@ -86,6 +93,9 @@ void show_help() {
 
 void parse_commandline_options(int argc, char* argv[], Options* options) {
   enum LONG_OPTIONS {
+    OPT_NAIVE,
+    OPT_MINNUMENCLCHILD,
+    OPT_MAXNUMENCLPARENT,
     OPT_COMBINEALLELES,
     OPT_DEBUG,
     OPT_DEFAULTPRIOR,
@@ -117,6 +127,9 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_VERSION,
   };
   static struct option long_options[] = {
+    {"naive", 0, 0, OPT_NAIVE},
+    {"min-num-encl-child", 1, 0, OPT_MINNUMENCLCHILD},
+    {"max-num-encl-parent", 1, 0, OPT_MAXNUMENCLPARENT},
     {"combine-alleles-by-length", 0, 0, OPT_COMBINEALLELES},
     {"debug", 0, 0, OPT_DEBUG},
     {"default-prior", 1, 0, OPT_DEFAULTPRIOR},
@@ -154,6 +167,15 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
                    long_options, &option_index);
   while (ch != -1) {
     switch (ch) {
+    case OPT_NAIVE:
+      options->naive = true;
+      break;
+    case OPT_MINNUMENCLCHILD:
+      options->min_num_encl_child = atoi(optarg);
+      break;
+    case OPT_MAXNUMENCLPARENT:
+      options->max_num_encl_parent = atoi(optarg);
+      break;
     case OPT_COMBINEALLELES:
       options->combine_alleles = true;
       break;
@@ -278,8 +300,8 @@ int main(int argc, char* argv[]) {
       PrintMessageDieOnError("combine-alleles ignored for GangSTR files", M_WARNING);
       options.combine_alleles = false;
     }
-    // TODO other command line items we need to check for gangstr
   }
+
   // Load STR VCF file
   if (!file_exists(options.strvcf)) {
     PrintMessageDieOnError("STR vcf file " + options.strvcf + " does not exist.", M_ERROR);
@@ -303,16 +325,19 @@ int main(int argc, char* argv[]) {
   }
   pedigree_set.PrintStatus();
 
-  // Set up priors
-  PrintMessageDieOnError("Opening priors file...", M_PROGRESS);
-  MutationPriors priors(options.default_prior, options.default_beta,
-			options.default_pgeom, options.default_central,
-			options.priors_file);
-
   // Run denovo analysis, based on trios
   PrintMessageDieOnError("Running de novo analysis...", M_PROGRESS);
   TrioDenovoScanner denovo_scanner(pedigree_set, options);
-  denovo_scanner.scan(strvcf, priors);
+  if (options.naive) {
+    denovo_scanner.naive_scan(strvcf);
+  } else {
+    // Set up priors
+    PrintMessageDieOnError("Opening priors file...", M_PROGRESS);
+    MutationPriors priors(options.default_prior, options.default_beta,
+			  options.default_pgeom, options.default_central,
+			  options.priors_file);
+    denovo_scanner.scan(strvcf, priors);
+  }
 
   // Tear down
   total_time = (clock() - total_time)/CLOCKS_PER_SEC;

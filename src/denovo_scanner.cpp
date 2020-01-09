@@ -41,9 +41,112 @@ TrioDenovoScanner::~TrioDenovoScanner() {
   all_mutations_file_.close();
 }
 
+void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
+  if (options_.debug) PrintMessageDieOnError("Scanning for de novos using naive method...", M_PROGRESS);
+  VCF::Variant str_variant;
+  std::vector<NuclearFamily> families = pedigree_set_.get_families();
+  std::vector<DenovoResult> denovo_results;
+  while (strvcf.get_next_variant(&str_variant, options_.round_alleles)) {
+    // Clear leftovers
+    denovo_results.clear();
+    // Get locu sinfo
+    if (options_.debug) PrintMessageDieOnError("Getting locus info...", M_PROGRESS);
+    int32_t start;
+    if (options_.gangstr) {
+      start = str_variant.get_position();
+    } else {
+      str_variant.get_INFO_value_single_int(START_KEY, start);
+    }
+    int32_t end; str_variant.get_INFO_value_single_int(END_KEY, end);
+    int32_t period; str_variant.get_INFO_value_single_int(PERIOD_KEY, period);
+    if (options_.period != 0 && period != options_.period) {
+      str_variant.destroy_record();
+      continue;
+    }
+    std::stringstream ss;
+    ss << "Processing STR region " << str_variant.get_chromosome() << ":" << start << "-" << end;
+    PrintMessageDieOnError(ss.str(), M_PROGRESS);
+    if (options_.debug)  PrintMessageDieOnError("Checking if we have any samples...", M_PROGRESS);
+    if (str_variant.num_samples() == str_variant.num_missing()) {
+      std::stringstream ss;
+      ss << "Found " << str_variant.num_samples() << " missing: " << str_variant.num_missing() << endl;
+      if (options_.debug) PrintMessageDieOnError(ss.str(), M_PROGRESS);
+      str_variant.destroy_record();
+      continue;
+    }
+    // Scan each family
+    if (options_.debug) PrintMessageDieOnError("Scanning families...", M_PROGRESS);
+    for (auto family_iter = families.begin(); family_iter != families.end(); family_iter++) {
+      if (!options_.family.empty() and family_iter->get_family_id() != options_.family) {
+	continue;
+      }
+      if (str_variant.sample_call_missing(family_iter->get_mother()) || 
+	  str_variant.sample_call_missing(family_iter->get_father())) {
+	continue; // No point if there are no calls for parents
+      }
+      // First check we have children we need
+      bool scan_for_denovo = true;
+      int num_children_nonmissing = 0;
+      for (auto child_iter = family_iter->get_children().begin();
+	   child_iter != family_iter->get_children().end(); child_iter++) {
+	if (options_.require_all_children) {
+	  scan_for_denovo = scan_for_denovo && !str_variant.sample_call_missing(*child_iter);
+	}
+	if (!str_variant.sample_call_missing(*child_iter)) {
+	  num_children_nonmissing += 1;
+	}
+      }
+      ss.str("");
+      ss << "Found " << num_children_nonmissing << " nonmissing children . Scanning for de novo=" << scan_for_denovo;
+      if (options_.debug) PrintMessageDieOnError(ss.str(), M_PROGRESS);
+      scan_for_denovo = scan_for_denovo && (num_children_nonmissing > 0);
+
+      // Get parent gentoype info
+      int gt_mother_a, gt_mother_b, gt_father_a, gt_father_b, gt_child_a, gt_child_b;
+      str_variant.get_genotype(family_iter->get_mother(), gt_mother_a, gt_mother_b);
+      str_variant.get_genotype(family_iter->get_father(), gt_father_a, gt_father_b);
+
+      // Scan each child in the family
+      for (auto child_iter = family_iter->get_children().begin(); child_iter != family_iter->get_children().end(); child_iter++) {
+	if (options_.debug) PrintMessageDieOnError("Scanning child...", M_PROGRESS);
+	if (!scan_for_denovo || str_variant.sample_call_missing(*child_iter)) {
+	  continue;
+	}
+	// Get child genotype info
+	str_variant.get_genotype(*child_iter, gt_child_a, gt_child_b);
+
+	// Test for Mendelian inheritance
+	bool follows_MI = false;
+	if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) && (gt_child_b == gt_father_a || gt_child_b == gt_father_b)) {
+	  follows_MI = true;
+	} else if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) && (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
+	  follows_MI = true;
+	}
+	if (options_.debug && !follows_MI) {
+	  cerr << gt_mother_a << "," << gt_mother_b << " " << gt_father_a << "," << gt_father_b << " " << gt_child_a << "," << gt_child_b << endl;
+	}
+	// TODO check encl/flnk reads
+	// Add to results
+	if (follows_MI) {
+	  DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(),
+			   (*child_iter), family_iter->get_child_phenotype(*child_iter),
+			   0, 0, -8);
+	  denovo_results.push_back(dnr);
+	} else {
+	  DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(),
+			   (*child_iter), family_iter->get_child_phenotype(*child_iter),
+			   -10000, 0, -8);
+	  denovo_results.push_back(dnr);
+	}
+      }
+    }
+    summarize_results(denovo_results, str_variant);
+  }
+}
+
 void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 			     MutationPriors& priors) {
-  if (options_.debug) PrintMessageDieOnError("Scanning for de novos...", M_PROGRESS);
+  if (options_.debug) PrintMessageDieOnError("Scanning for de novos using model based method...", M_PROGRESS);
   VCF::Variant str_variant;
   std::vector<NuclearFamily> families = pedigree_set_.get_families();
   std::vector<DenovoResult> denovo_results;

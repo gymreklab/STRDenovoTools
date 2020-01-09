@@ -94,6 +94,7 @@ class TrioDenovoScanner {
   virtual ~TrioDenovoScanner();
 
   void scan(VCF::VCFReader& strvcf, MutationPriors& priors);
+  void naive_scan(VCF::VCFReader& strvcf);
   void summarize_results(std::vector<DenovoResult>& dnr,
 			 VCF::Variant& str_variant);
   /*

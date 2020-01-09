@@ -83,7 +83,7 @@ void PedigreeSet::PrintStatus() {
 	 child_iter != children.end(); child_iter++) {
       ss << "Child=" << *child_iter << " " ;
     }
-    PrintMessageDieOnError(ss.str(), M_PROGRESS);
+    //PrintMessageDieOnError(ss.str(), M_PROGRESS);
     for (auto child_iter = children_status.begin();
 	 child_iter != children_status.end();
 	 child_iter++) {

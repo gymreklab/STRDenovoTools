@@ -75,6 +75,11 @@ class Options {
   double default_pgeom;
   int default_central;
 
+  // Naive mutation calling
+  bool naive;
+  int min_num_encl_child;
+  int max_num_encl_parent;
+
   // debugging
   bool debug;
 };
