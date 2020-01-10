@@ -82,6 +82,7 @@ class Options {
   float max_perc_encl_parent;
   float min_encl_match;
   int min_total_encl;
+  bool filter_hom;
 
   // debugging
   bool debug;

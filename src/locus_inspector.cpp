@@ -52,7 +52,7 @@ void LocusInspector::GetAlleleCountByPhenotype(VCF::Variant& variant, std::vecto
       if (combine_alleles) {
 	variant.get_length_genotype(father, f_gt_a, f_gt_b);
       } else {
-	variant.get_genotype(mother, f_gt_a, f_gt_b);
+	variant.get_genotype(father, f_gt_a, f_gt_b);
       }
       if (f_gt_a == allele) {
 	(*count_unknown)++;

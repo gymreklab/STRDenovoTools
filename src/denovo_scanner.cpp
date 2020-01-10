@@ -35,6 +35,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 std::string TrioDenovoScanner::START_KEY   = "START";
 std::string TrioDenovoScanner::END_KEY     = "END";
 std::string TrioDenovoScanner::PERIOD_KEY  = "PERIOD";
+std::string DenovoResult::PERIOD_KEY  = "PERIOD";
 
 TrioDenovoScanner::~TrioDenovoScanner() {
   locus_summary_.close();
@@ -122,24 +123,21 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
 	} else if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) && (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
 	  follows_MI = true;
 	}
-	if (!follows_MI && !check_mutation(str_variant,
-					   strvcf.get_sample_index(family_iter->get_mother()),
-					   strvcf.get_sample_index(family_iter->get_father()),
-					   strvcf.get_sample_index(*child_iter))) {
-	  follows_MI = true;
-	}
-	if (options_.debug && !follows_MI) {
-	  cerr << gt_mother_a << "," << gt_mother_b << " " << gt_father_a << "," << gt_father_b << " " << gt_child_a << "," << gt_child_b << endl;
-	}
 	// Add to results
-	if (follows_MI) {
-	  DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(),
-			   (*child_iter), family_iter->get_child_phenotype(*child_iter),
+	if (follows_MI) { // Set dummy values to force posterior to 0
+	  DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(), (*child_iter), 
+			   family_iter->get_child_phenotype(*child_iter),
+			   strvcf.get_sample_index(family_iter->get_mother()),
+			   strvcf.get_sample_index(family_iter->get_father()),
+			   strvcf.get_sample_index(*child_iter),
 			   0, 0, -8);
 	  denovo_results.push_back(dnr);
-	} else {
-	  DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(),
-			   (*child_iter), family_iter->get_child_phenotype(*child_iter),
+	} else { // Set dummy values to force posterior to 1
+	  DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(), (*child_iter),
+			   family_iter->get_child_phenotype(*child_iter),
+			   strvcf.get_sample_index(family_iter->get_mother()),
+			   strvcf.get_sample_index(family_iter->get_father()),
+			   strvcf.get_sample_index(*child_iter),
 			   -10000, 0, -8);
 	  denovo_results.push_back(dnr);
 	}
@@ -147,211 +145,6 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
     }
     summarize_results(denovo_results, str_variant);
   }
-}
-
-bool TrioDenovoScanner::check_mutation(const VCF::Variant& str_variant,
-				       const int32_t& mother_ind,
-				       const int32_t& father_ind,
-				       const int32_t& child_ind) {
-  // Extract enclreads and flnkreads
-  std::vector<std::string> enclreads, flnkreads;
-  std::string enclreads_mother, enclreads_father, enclreads_child;
-  std::string flnkreads_mother, flnkreads_father, flnkreads_child;
-  str_variant.get_FORMAT_value_single_string(ENCLREADS_KEY, enclreads);
-  str_variant.get_FORMAT_value_single_string(FLNKREADS_KEY, flnkreads);
-  enclreads_mother = enclreads[mother_ind];
-  enclreads_father = enclreads[father_ind];
-  enclreads_child = enclreads[child_ind];
-  flnkreads_mother = flnkreads[mother_ind];
-  flnkreads_father = flnkreads[father_ind];
-  flnkreads_child = flnkreads[child_ind];
-  // Get allele calls
-  int32_t period; str_variant.get_INFO_value_single_int(PERIOD_KEY, period);
-  int gt_mother_a, gt_mother_b, gt_father_a, gt_father_b, gt_child_a, gt_child_b;
-  int repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b, repcn_child_a, repcn_child_b;
-  int ref_allele_size = (int)str_variant.get_allele(0).size();
-  str_variant.get_genotype(mother_ind, gt_mother_a, gt_mother_b);
-  str_variant.get_genotype(father_ind, gt_father_a, gt_father_b);
-  str_variant.get_genotype(child_ind, gt_child_a, gt_child_b);
-  repcn_mother_a = ((int)str_variant.get_allele(gt_mother_a).size())/period;
-  repcn_mother_b = ((int)str_variant.get_allele(gt_mother_b).size())/period;
-  repcn_father_a = ((int)str_variant.get_allele(gt_father_a).size())/period;
-  repcn_father_b = ((int)str_variant.get_allele(gt_father_b).size())/period;
-  repcn_child_a = ((int)str_variant.get_allele(gt_child_a).size())/period;
-  repcn_child_b = ((int)str_variant.get_allele(gt_child_b).size())/period;
-
-  //*** Figure out the new allele - TODO this can probably be simplified ***//
-  int new_allele = 0;
-  int poocase = -1; // 2=new allele from father, 3=new allele from mother, 4=not in anyone
-  // Case 2: new allele from father.
-  // Allele a in mother only, allele b not in father
-  if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b) &&
-      (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) &&
-      (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b)) {
-    new_allele = repcn_child_b;
-    poocase = 2;
-  } else
-  // Allele b in mother only, allele a not in father
-  if ((repcn_child_b == repcn_mother_a || repcn_child_b == repcn_mother_b) &&
-      (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) &&
-      (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b)) {
-    new_allele = repcn_child_a;
-    poocase = 2;
-  }
-  // Case 3: New allele from mother
-  // Allele a in father only, allele b not in mother
-  if ((repcn_child_a == repcn_father_a || repcn_child_a == repcn_father_b) &&
-      (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b) &&
-      (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b)) {
-    new_allele = repcn_child_b;
-    poocase = 3;
-  }
-  // Allele b in father only, allele a not in mother
-  if ((repcn_child_b == repcn_father_a || repcn_child_b == repcn_father_b) &&
-      (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b) &&
-      (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b)) {
-    new_allele = repcn_child_a;
-    poocase = 3;
-  }
-  // Case 4: new allele not in either parent at all
-  if (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b &&
-      repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) {
-    new_allele = repcn_child_a;
-    poocase = 4;
-  }
-  if (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b &&
-      repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) {
-    new_allele = repcn_child_b;
-    poocase = 4;
-  }
-  if (new_allele == 0) {
-    if (options_.debug) {
-      cerr  << repcn_mother_a<<","<<repcn_mother_b << " " << repcn_father_a<<","<<repcn_father_b << " " << repcn_child_a<<","<<repcn_child_b << endl;
-      cerr << enclreads_mother << " " << enclreads_father << " " << enclreads_child << endl;
-    }
-    PrintMessageDieOnError("Couldn't figure out new allele", M_ERROR);
-    return false;
-  }
-
-  if (options_.debug) {
-    cerr << "checking" << endl;
-    cerr << "new allele " << new_allele << endl;
-    cerr  << repcn_mother_a<<","<<repcn_mother_b << " " << repcn_father_a<<","<<repcn_father_b << " " << repcn_child_a<<","<<repcn_child_b << endl;
-    cerr << enclreads_mother << " " << enclreads_father << " " << enclreads_child << endl;
-  }
-
-  //*** Check new allele enclosing reads ***//
-  // First check in child
-  std::vector<std::string> enclreads_child_items, items;
-  int encl_child = 0;
-  int total_encl_child = 0;
-  int child_encl_match = 0;
-  if (enclreads_child != "NULL") {
-    split_by_delim(enclreads_child, '|', enclreads_child_items);
-    for (auto item_iter = enclreads_child_items.begin(); item_iter != enclreads_child_items.end(); item_iter++) {
-      split_by_delim(*item_iter, ',', items);
-      int allele = stoi(items[0]);
-      int count = stoi(items[1]);
-      total_encl_child += count;
-      if (allele == new_allele) {
-	encl_child = count;
-      }
-      if (allele == repcn_child_a || allele == repcn_child_b) {
-	child_encl_match += count;
-      }
-      items.clear();
-    }
-  }
-  if (total_encl_child < options_.min_total_encl) {
-    if (options_.debug) {cerr << "reject based on child total encl: " << total_encl_child << endl;}
-    return false;
-  }
-  if (encl_child < options_.min_num_encl_child) {
-    if (options_.debug) {cerr << "reject based on child encl: " << encl_child << endl;}
-    return false;
-  }
-  // Then get min in parents
-  int encl_mother = 0;
-  int encl_father = 0;
-  int total_encl_mother = 0;
-  int total_encl_father = 0;
-  int mother_encl_match = 0;
-  int father_encl_match = 0;
-  std::vector<std::string> enclreads_parent_items;
-  //cerr << "Before parse: mother " << enclreads_mother << " " << total_encl_mother << " " << encl_mother << endl;
-  if (enclreads_mother != "NULL") {
-    split_by_delim(enclreads_mother, '|', enclreads_parent_items);
-    for (auto item_iter = enclreads_parent_items.begin(); item_iter != enclreads_parent_items.end(); item_iter++) {
-      split_by_delim(*item_iter, ',', items);
-      int allele = stoi(items[0]);
-      int count = stoi(items[1]);
-      if (allele == new_allele) {
-	encl_mother = count;
-      }
-      if (allele == repcn_mother_a || allele == repcn_mother_b) {
-	mother_encl_match += count;
-      }
-      total_encl_mother += count;
-      items.clear();
-    }
-  }
-  //cerr << "After parse: mother " << enclreads_mother << " " << total_encl_mother << " " << encl_mother << endl;
-  enclreads_parent_items.clear();
-  //  cerr << "Before parse: father " << enclreads_father << " " << total_encl_father << " " << encl_father << endl;
-  if (enclreads_father != "NULL") {
-    split_by_delim(enclreads_father, '|', enclreads_parent_items);
-    for (auto item_iter = enclreads_parent_items.begin(); item_iter != enclreads_parent_items.end(); item_iter++) {
-      split_by_delim(*item_iter, ',', items);
-      int allele = stoi(items[0]);
-      int count = stoi(items[1]);
-      if (allele == new_allele) {
-	encl_father = count;
-      }
-      total_encl_father += count;
-      if (allele == repcn_father_a || allele == repcn_father_b) {
-	father_encl_match += count;
-      }
-      items.clear();
-    }
-  }
-  //  cerr << "After parse: father " << enclreads_father << " " << total_encl_father << " " << encl_father << endl;
-  //cerr << "total encl " << total_encl_mother << " " << total_encl_father << endl;
-  //cerr << "max encl " << options_.max_num_encl_parent << endl;
-  // Check purity
-  if (((float)child_encl_match/(float)total_encl_child < options_.min_encl_match) ||
-      ((float)mother_encl_match/(float)total_encl_mother < options_.min_encl_match) ||
-      ((float)father_encl_match/(float)total_encl_father < options_.min_encl_match)) {
-    if (options_.debug) {cerr << "reject based on messy enclosing reads" << endl;}
-    return false;
-  }
-  // Check totals
-  if (total_encl_mother < options_.min_total_encl || total_encl_father < options_.min_total_encl) {
-    if (options_.debug) {cerr << "reject based on parents total encl" << endl;}
-    return false;
-  }
-  if (poocase == 2 && (encl_father > options_.max_num_encl_parent || (float)encl_father/(float)total_encl_father > options_.max_perc_encl_parent) ) {
-    if (options_.debug) {cerr << "reject based on father encl" << " " << encl_father << endl;}
-    return false;
-  }
-  if (poocase == 3 && (encl_mother > options_.max_num_encl_parent || (float)encl_mother/(float)total_encl_mother > options_.max_perc_encl_parent) ) {
-    if (options_.debug) {cerr << "reject based on mother encl" << " " << encl_mother << endl;}
-    return false;
-  }
-  if (poocase == 4 && (encl_mother > options_.max_num_encl_parent || encl_father > options_.max_num_encl_parent ||
-		       (float)encl_mother/(float)total_encl_mother > options_.max_perc_encl_parent ||
-		       (float)encl_father/(float)total_encl_father > options_.max_perc_encl_parent )) {
-    if (options_.debug) {cerr << "reject based on either parent encl " << encl_mother << " " << encl_father << endl;}
-    return false;
-  }
-
-  if (options_.debug) {
-    cerr << "passed!" << endl;
-    cerr << "new allele " << new_allele << endl;
-    cerr  << repcn_mother_a<<","<<repcn_mother_b << " " << repcn_father_a<<","<<repcn_father_b << " " << repcn_child_a<<","<<repcn_child_b << endl;
-    cerr << enclreads_mother << " " << enclreads_father << " " << enclreads_child << endl;
-    cerr << flnkreads_mother << " " << flnkreads_father << " " << flnkreads_child << endl;
-  }
-  return true;
 }
 
 void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
@@ -576,8 +369,11 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 	  total_ll_one_denovo  = finish_streaming_log_sum_exp(ll_one_denovo_max,  ll_one_denovo_total);
 	}
 	// Add to results
-	DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(),
-			 (*child_iter), family_iter->get_child_phenotype(*child_iter),
+	DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(), (*child_iter),
+			 family_iter->get_child_phenotype(*child_iter),
+			 strvcf.get_sample_index(family_iter->get_mother()),
+			 strvcf.get_sample_index(family_iter->get_father()),
+			 strvcf.get_sample_index(*child_iter),
 			 total_ll_no_mutation, total_ll_one_denovo, prior_rate);
 	if (options_.debug) PrintMessageDieOnError("Adding dnr result", M_PROGRESS);
 	denovo_results.push_back(dnr);
@@ -594,174 +390,277 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
   }
 }
 
-/*
-  Try to determine the de novo allele and how big the step size was
-  If we can't figure it out, return "NA" for new_allele and mut_size
- */
-void TrioDenovoScanner::GetMutationInfo(const VCF::Variant& variant, const std::string& mother_id,
-					const std::string& father_id, const std::string& child_id,
-					std::string* new_allele, std::string* new_allele_raw, std::string* mut_size,
-					bool* new_allele_in_parents, int* poocase,
-          std::string* child_gt, std::string* mat_gt, std::string* pat_gt) {
-  int gt_mother_a, gt_mother_b, gt_father_a, gt_father_b, gt_child_a, gt_child_b;
-  int ref_allele_size = (int)variant.get_allele(0).size();
-  *new_allele = "NA";
-  *mut_size = "NA";
-  *poocase = -1;
-  variant.get_genotype(mother_id, gt_mother_a, gt_mother_b);
-  variant.get_genotype(father_id, gt_father_a, gt_father_b);
-  variant.get_genotype(child_id, gt_child_a, gt_child_b);
-  *child_gt = std::to_string((int)variant.get_allele(gt_child_a).size()) + "," + std::to_string((int)variant.get_allele(gt_child_b).size());
-  *mat_gt = std::to_string((int)variant.get_allele(gt_mother_a).size()) + "," + std::to_string((int)variant.get_allele(gt_mother_b).size());
-  *pat_gt = std::to_string((int)variant.get_allele(gt_father_a).size()) + "," + std::to_string((int)variant.get_allele(gt_father_b).size());
-  // Case 1: Mendelian - skip
-  if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) &&
-      (gt_child_b == gt_father_a || gt_child_b == gt_father_b)) {
-    *new_allele_in_parents = true;
-    *poocase = 1;
-    return;
-  }
-  if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) &&
-      (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
-    *new_allele_in_parents = true;
-    *poocase = 1;
-    return;
-  }
-  // Case 2: New allele from father
-  // Allele a in mother only, allele b not in father
-  if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) &&
-      (gt_child_a != gt_father_a && gt_child_a != gt_father_b) &&
-      (gt_child_b != gt_father_a && gt_child_b != gt_father_b)) {
-    int nal = (int)variant.get_allele(gt_child_b).size()-ref_allele_size;
-    *new_allele = std::to_string(nal);
-    *new_allele_raw = std::to_string(nal);
-    if (options_.round_alleles) {
-      *new_allele = std::to_string(variant.round_allele_length(nal));
-    }
-    int diff1 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_a).size();
-    int diff2 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_b).size();
-    if (abs(diff1) < abs(diff2)) {
-      *mut_size = std::to_string(diff1);
+
+void DenovoResult::GetRepcn(const VCF::Variant& variant, const int32_t& sample_ind,
+			    int* repcn_a, int* repcn_b) {
+  int32_t period; variant.get_INFO_value_single_int(PERIOD_KEY, period);
+  int gt_a, gt_b;
+  variant.get_genotype(sample_ind, gt_a, gt_b);
+  *repcn_a = ((int)variant.get_allele(gt_a).size())/period;
+  *repcn_b = ((int)variant.get_allele(gt_b).size())/period;
+}
+
+int DenovoResult::GetTrans(const int& child, const int& p1, const int& p2) {
+  if (child == p1) {
+    if (p1 == p2) {
+      return 0;
+    } else if (p1<p2) {
+      return 1;
     } else {
-      *mut_size = std::to_string(diff2);
+      return 2;
     }
-    *poocase = 2;
+  }
+  if (child == p2) {
+    if (p1 == p2) {
+      return 0;
+    } else if (p2<p1) {
+      return 1;
+    } else {
+      return 2;
+    }
+  }
+  return 2;
+}
+
+// Must be run after GetMutationInfo
+// 0=unknown, 1=shorter, 2=longer
+void DenovoResult::TestTransmission(int* long_mother, int* long_father) {
+  if ((child_gt_a_ == mat_gt_a_ || child_gt_a_ == mat_gt_b_) &&
+      (child_gt_b_ == pat_gt_a_ || child_gt_b_ == pat_gt_b_)) {
+    // a came from mother, b from father
+    *long_mother = GetTrans(child_gt_a_, mat_gt_a_, mat_gt_b_);
+    *long_father = GetTrans(child_gt_b_, pat_gt_a_, pat_gt_b_);
     return;
+  }
+  if ((child_gt_a_ == pat_gt_a_ || child_gt_a_ == pat_gt_b_) &&
+      (child_gt_b_ == mat_gt_a_ || child_gt_b_ == mat_gt_b_)) {
+    // b came from mother, a from father
+    *long_mother = GetTrans(child_gt_b_, mat_gt_a_, mat_gt_b_);
+    *long_father = GetTrans(child_gt_a_, pat_gt_a_, pat_gt_b_);
+    return;
+  }
+  // Else, we aren't sure
+  *long_mother = 0;
+  *long_father = 0;
+}
+
+int DenovoResult::GetMutSize(const int& new_allele, const int& a1, const int& a2) {
+  int diff1 = new_allele - a1;
+  int diff2 = new_allele - a2;
+  if (abs(diff1) < abs(diff2)) {
+    return diff1;
+  } else {
+    return diff2;
+  }
+}
+
+int DenovoResult::GetMutSize(const int& new_allele, const int& a1, const int& a2, const int& a3, const int& a4) {
+  int diff1 = new_allele - a1;
+  int diff2 = new_allele - a2;
+  int diff3 = new_allele - a3;
+  int diff4 = new_allele - a4;
+  int min_size = std::min(std::min(abs(diff1), abs(diff2)), std::min(abs(diff3), abs(diff4)));
+  if (min_size == abs(diff1)) {
+    return diff1;
+  } else if (min_size == abs(diff2)) {
+    return diff2;
+  } else if (min_size == abs(diff2)) {
+    return diff3;
+  } else {
+    return diff4;
+  }
+}
+
+void DenovoResult::GetEnclosing(const std::string& enclstring, int& new_allele,
+				const int32_t& repcn_a, const int32_t& repcn_b,
+				int* encl_newallele, int* encl_total, int* encl_match) {
+  *encl_newallele = 0;
+  *encl_total = 0;
+  *encl_match = 0;
+  if (enclstring == "NULL") {
+    return;
+  }
+  std::vector<std::string> enclreads_items, items;
+  split_by_delim(enclstring, '|', enclreads_items);
+  for (auto item_iter = enclreads_items.begin(); item_iter != enclreads_items.end(); item_iter++) {
+    split_by_delim(*item_iter, ',', items);
+    int allele = stoi(items[0]);
+    int count = stoi(items[1]);
+    *encl_total += count;
+    if (allele == new_allele) {
+      *encl_newallele = count;
+    }
+    if (allele == repcn_a || allele == repcn_b) {
+      *encl_match += count;
+    }
+    items.clear();
+  }
+}
+
+/*
+  Get a lot of metadata about the mutation
+    poocase: describes inheritance pattern
+    0: unknown
+    1: Mendelian (no denovo)
+    2: New allele from father
+    3: New allele from mother
+    4: Unclear
+ */
+void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& variant,
+				   bool* filter_mutation) {
+  *filter_mutation = false;
+  int32_t period; variant.get_INFO_value_single_int(PERIOD_KEY, period);
+  // *** First set genotypes *** //
+  int repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b, repcn_child_a, repcn_child_b;
+  GetRepcn(variant, mother_ind_, &repcn_mother_a, &repcn_mother_b);
+  GetRepcn(variant, father_ind_, &repcn_father_a, &repcn_father_b);
+  GetRepcn(variant, child_ind_, &repcn_child_a, &repcn_child_b);
+  child_gt_ = std::to_string(repcn_child_a) + "," + std::to_string(repcn_child_b);
+  mat_gt_ = std::to_string(repcn_mother_a) + "," + std::to_string(repcn_mother_b);
+  pat_gt_ = std::to_string(repcn_father_a) + "," + std::to_string(repcn_father_b);
+  child_gt_a_ = repcn_child_a; child_gt_b_ = repcn_child_b;
+  mat_gt_a_ = repcn_mother_a; mat_gt_b_ = repcn_mother_b;
+  pat_gt_a_ = repcn_father_a; pat_gt_b_ = repcn_father_b;
+
+  // *** Figure out new allele and POO *** //
+  new_allele_ = 0;
+  poocase_ = 0; // 1=Mendelian 2=new allele from father, 3=new allele from mother, 4=not in anyone
+  // Case 1: Mendelian
+  if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b) &&
+      (repcn_child_b == repcn_father_a || repcn_child_b == repcn_father_b)) {
+    poocase_ = 1;
+    new_allele_in_parents_ = true;
+    new_allele_ = 0;
+    mut_size_ = 0;
+    return;
+  }
+  if ((repcn_child_a == repcn_father_a || repcn_child_a == repcn_father_b) &&
+      (repcn_child_b == repcn_mother_a || repcn_child_b == repcn_mother_b)) {
+    poocase_ = 1;
+    new_allele_in_parents_ = true;
+    new_allele_ = 0;
+    mut_size_ = 0;
+    return;
+  }
+  // Case 2: new allele from father.
+  // Allele a in mother only, allele b not in father
+  if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b) &&
+      (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) &&
+      (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b)) {
+    new_allele_ = repcn_child_b;
+    poocase_ = 2;
+    mut_size_ = GetMutSize(new_allele_, repcn_father_a, repcn_father_b);
   }
   // Allele b in mother only, allele a not in father
-  if ((gt_child_b == gt_mother_a || gt_child_b == gt_mother_b) &&
-      (gt_child_b != gt_father_a && gt_child_b != gt_father_b) &&
-      gt_child_a != gt_father_a && gt_child_a != gt_father_b) {
-    int nal = (int)variant.get_allele(gt_child_a).size()-ref_allele_size;
-    *new_allele = std::to_string(nal);
-    *new_allele_raw = std::to_string(nal);
-    if (options_.round_alleles) {
-      *new_allele = std::to_string(variant.round_allele_length(nal));
-    }
-    int diff1 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_a).size();
-    int diff2 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_b).size();
-    if (abs(diff1) < abs(diff2)) {
-      *mut_size = std::to_string(diff1);
-    } else {
-      *mut_size = std::to_string(diff2);
-    }
-    *poocase = 21;
-    return;
+  if ((repcn_child_b == repcn_mother_a || repcn_child_b == repcn_mother_b) &&
+      (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) &&
+      (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b)) {
+    new_allele_ = repcn_child_a;
+    poocase_ = 2;
+    mut_size_ = GetMutSize(new_allele_, repcn_father_a, repcn_father_b);    
   }
   // Case 3: New allele from mother
   // Allele a in father only, allele b not in mother
-  if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) &&
-      (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b) &&
-      (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b)) {
-    int nal = (int)variant.get_allele(gt_child_b).size()-ref_allele_size;
-    *new_allele = std::to_string(nal);
-    *new_allele_raw = std::to_string(nal);
-    if (options_.round_alleles) {
-      *new_allele = std::to_string(variant.round_allele_length(nal));
-    }
-    int diff1 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_a).size();
-    int diff2 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_b).size();
-    if (abs(diff1) < abs(diff2)) {
-      *mut_size = std::to_string(diff1);
-    } else {
-      *mut_size = std::to_string(diff2);
-    }
-    *poocase = 3;
-    return;
+  if ((repcn_child_a == repcn_father_a || repcn_child_a == repcn_father_b) &&
+      (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b) &&
+      (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b)) {
+    new_allele_ = repcn_child_b;
+    poocase_ = 3;
+    mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
   }
   // Allele b in father only, allele a not in mother
-  if ((gt_child_b == gt_father_a || gt_child_b == gt_father_b) &&
-      (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b) &&
-      (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b)) {
-    int nal = (int)variant.get_allele(gt_child_a).size()-ref_allele_size;
-    *new_allele = std::to_string(nal);
-    *new_allele_raw = std::to_string(nal);
-    if (options_.round_alleles) {
-      *new_allele = std::to_string(variant.round_allele_length(nal));
-    }
-    int diff1 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_a).size();
-    int diff2 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_b).size();
-    if (abs(diff1) < abs(diff2)) {
-      *mut_size = std::to_string(diff1);
-    } else {
-      *mut_size = std::to_string(diff2);
-    }
-    *poocase = 31;
+  if ((repcn_child_b == repcn_father_a || repcn_child_b == repcn_father_b) &&
+      (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b) &&
+      (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b)) {
+    new_allele_ = repcn_child_a;
+    poocase_ = 3;
+    mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
+  }
+  // Case 4: new allele not in either parent at all and we haven't figured it out yet
+  if (poocase_ == 0 && repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b &&
+      repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) {
+    new_allele_ = repcn_child_a;
+    poocase_ = 4;
+    mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b);
+  }
+  if (poocase_ == 0 && repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b &&
+      repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) {
+    new_allele_ = repcn_child_b;
+    poocase_ = 4;
+    mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b);
+  }
+  if (repcn_child_a == new_allele_ && repcn_child_b == new_allele_ & options.filter_hom) {
+    *filter_mutation = true;
     return;
   }
-  // Case 4: Not clear, pick closest allele that is not equal
-  if (gt_child_a != gt_mother_a && gt_child_a != gt_mother_b &&
-      gt_child_a != gt_father_a && gt_child_a != gt_father_b) {
-    int nal = (int)variant.get_allele(gt_child_a).size()-ref_allele_size;
-    *new_allele = std::to_string(nal);
-    *new_allele_raw = std::to_string(nal);
-    if (options_.round_alleles) {
-      *new_allele = std::to_string(variant.round_allele_length(nal));
-    }
-    int diff1 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_a).size();
-    int diff2 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_mother_b).size();
-    int diff3 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_a).size();
-    int diff4 = (int)variant.get_allele(gt_child_a).size()-(int)variant.get_allele(gt_father_b).size();
-    int min_size = std::min(std::min(abs(diff1), abs(diff2)), std::min(abs(diff3), abs(diff4)));
-    if (min_size == abs(diff1)) {
-      *mut_size = std::to_string(diff1);
-    } else if (min_size == abs(diff2)) {
-      *mut_size = std::to_string(diff2);
-    } else if (min_size == abs(diff3)) {
-      *mut_size = std::to_string(diff3);
+  if (new_allele_ == repcn_mother_a || new_allele_ == repcn_mother_b ||
+      new_allele_ == repcn_father_a || new_allele_ == repcn_father_b) {
+    new_allele_in_parents_ = true;
+  }
+
+  // *** Get enclosing read info to set filter *** //
+  // Extract enclreads and flnkreads
+  std::vector<std::string> enclreads;
+  variant.get_FORMAT_value_single_string(ENCLREADS_KEY, enclreads);
+  int encl_child, total_encl_child, child_encl_match;
+  int encl_mother, total_encl_mother, mother_encl_match;
+  int encl_father, total_encl_father, father_encl_match;
+  float encl_reads_perc_parent = 0;;
+  GetEnclosing(enclreads[child_ind_], new_allele_, repcn_child_a, repcn_child_b, &encl_child, &total_encl_child, &child_encl_match);
+  GetEnclosing(enclreads[mother_ind_], new_allele_, repcn_mother_a, repcn_mother_b, &encl_mother, &total_encl_mother, &mother_encl_match);
+  GetEnclosing(enclreads[father_ind_], new_allele_, repcn_father_a, repcn_father_b, &encl_father, &total_encl_father, &father_encl_match);
+  // Set in dnr_iter
+  encl_reads_child_ = encl_child;
+  encl_reads_mother_ = encl_mother;
+  encl_reads_father_ = encl_father;
+  if (poocase_ == 2) {
+    encl_reads_parent_ = encl_reads_father_;
+    encl_reads_perc_parent = (float)encl_father/(float)total_encl_father;
+  } else if (poocase_ == 3) {
+    encl_reads_parent_ = encl_reads_mother_;
+    encl_reads_perc_parent = (float)encl_mother/(float)total_encl_mother;
+  } else {
+    if (encl_reads_father_ > encl_reads_mother_) {
+      encl_reads_parent_ = encl_reads_father_;
+      encl_reads_perc_parent = (float)encl_father/(float)total_encl_father;
     } else {
-      *mut_size = std::to_string(diff4);
+      encl_reads_parent_ = encl_reads_mother_;
+      encl_reads_perc_parent = (float)encl_mother/(float)total_encl_mother;
     }
-    *poocase = 4;
+  }
+  // *** Do checks *** //
+  // Total enclosing
+  if ((total_encl_child < options.min_total_encl) ||
+      (total_encl_mother < options.min_total_encl) ||
+      (total_encl_father < options.min_total_encl)) {
+    if (options.debug) {cerr << "Reject based on total enclosing" << endl;}
+    *filter_mutation = true;
     return;
   }
-  if (gt_child_b != gt_mother_a && gt_child_b != gt_mother_b &&
-      gt_child_b != gt_father_a && gt_child_b != gt_father_b) {
-    int nal = (int)variant.get_allele(gt_child_b).size()-ref_allele_size;
-    *new_allele = std::to_string(nal);
-    *new_allele_raw = std::to_string(nal);
-    if (options_.round_alleles) {
-      *new_allele = std::to_string(variant.round_allele_length(nal));
-    }
-    int diff1 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_a).size();
-    int diff2 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_mother_b).size();
-    int diff3 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_a).size();
-    int diff4 = (int)variant.get_allele(gt_child_b).size()-(int)variant.get_allele(gt_father_b).size();
-    int min_size = std::min(std::min(abs(diff1), abs(diff2)), std::min(abs(diff3), abs(diff4)));
-    if (min_size == abs(diff1)) {
-      *mut_size = std::to_string(diff1);
-    } else if (min_size == abs(diff2)) {
-      *mut_size = std::to_string(diff2);
-    } else if (min_size == abs(diff3)) {
-      *mut_size = std::to_string(diff3);
-    } else {
-      *mut_size = std::to_string(diff4);
-    }
-    *poocase = 41;
+  // Messiness
+  if (((float)child_encl_match/(float)total_encl_child < options.min_encl_match) ||
+      ((float)mother_encl_match/(float)total_encl_mother < options.min_encl_match) ||
+      ((float)father_encl_match/(float)total_encl_father < options.min_encl_match)) {
+    if (options.debug) {cerr << "reject based on messy enclosing reads" << endl;}
+    *filter_mutation = true;
     return;
   }
-  *poocase = 5;
-  return;
+  // Enclosing matching new allele
+  if (encl_child < options.min_num_encl_child) {
+    if (options.debug) {cerr << "reject based on child encl: " << encl_child << endl;}
+    *filter_mutation = true;
+    return;
+  }
+  if (encl_reads_parent_ > options.max_num_encl_parent) {
+    if (options.debug) {cerr << "reject based on num encl in parents" << endl;}
+    *filter_mutation = true;
+    return;
+  }
+  if (encl_reads_perc_parent > options.max_perc_encl_parent) {
+    if (options.debug) {cerr << "reject based on perc encl in parents" << endl;}
+    *filter_mutation = true;
+    return;
+  }
 }
 
 void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
@@ -797,39 +696,49 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   std::vector<std::string>children_with_mutations;
   for (auto dnr_iter = dnr.begin(); dnr_iter != dnr.end(); dnr_iter++) {
     total_children++;
-    std::string new_allele, new_allele_raw, mut_size, child_gt, mat_gt, pat_gt;
-    bool new_allele_in_parents = false;
-    int poocase;
-    GetMutationInfo(str_variant, dnr_iter->get_mother_id(), dnr_iter->get_father_id(),
-		    dnr_iter->get_child_id(), &new_allele, &new_allele_raw, &mut_size,
-		    &new_allele_in_parents, &poocase,
-        &child_gt, &mat_gt, &pat_gt);
+    bool filter_mutation = false;
+    dnr_iter->GetMutationInfo(options_, str_variant,
+			      &filter_mutation);
+    if (filter_mutation) {
+      dnr_iter->zero_posterior();
+    }
     int count_control = 0;
     int count_case = 0;
     int count_unknown = 0;
     bool is_new = false;
-    if (new_allele != "NA") {
+    int long_mother = 0;
+    int long_father = 0;
+      dnr_iter->TestTransmission(&long_mother, &long_father);
+    if (dnr_iter->get_poocase() > 1) {
+      // Compare to rest of samples
+      int new_allele_gb = dnr_iter->get_new_allele()*period - ref_allele_size;
       locus_inspector.GetAlleleCountByPhenotype(str_variant, pedigree_set_.get_families(),
-						atoi(new_allele.c_str()), &count_control, &count_case, &count_unknown,
+						new_allele_gb, &count_control, &count_case, &count_unknown,
 						options_.combine_alleles);
       is_new = (count_unknown == 0);
+    } else {
+      // Get transmission info. Don't bother if there was a mutation
+      dnr_iter->TestTransmission(&long_mother, &long_father);
     }
     if (dnr_iter->get_posterior() > options_.posterior_threshold || options_.outputall) {
       all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t"
 			  << period  << "\t" << pow(10, dnr_iter->get_prior()) << "\t"
 			  << dnr_iter->get_family_id() << "\t" << dnr_iter->get_child_id() << "\t"
 			  << dnr_iter->get_phenotype() << "\t" << dnr_iter->get_posterior() << "\t"
-			  << new_allele_raw << "\t" << mut_size << "\t"
-			  << new_allele_in_parents << "\t" << poocase << "\t"
+			  << dnr_iter->get_new_allele() << "\t" << dnr_iter->get_mut_size() << "\t"
+			  << dnr_iter->get_new_allele_in_parents() << "\t" << dnr_iter->get_poocase() << "\t"
 			  << is_new << "\t" << count_case << "\t" << count_control << "\t" << count_unknown << "\t"
-        << child_gt << "\t" << mat_gt << "\t" << pat_gt
+			  << dnr_iter->get_child_gt() << "\t" << dnr_iter->get_mat_gt() << "\t" << dnr_iter->get_pat_gt() << "\t"
+			  << dnr_iter->get_encl_reads_child() << "\t" << dnr_iter->get_encl_reads_mother() << "\t"
+			  << dnr_iter->get_encl_reads_father() << "\t" << dnr_iter->get_encl_reads_parent() << "\t"
+			  << long_mother << "\t" << long_father
 			  << "\n";
       all_mutations_file_.flush();
     }
     if (dnr_iter->get_posterior() > options_.posterior_threshold) {
       num_mutations++;
       children_with_mutations.push_back(dnr_iter->get_family_id() + ":" +
-					std::to_string(dnr_iter->get_phenotype()) + ":" + new_allele_raw + ":" +
+					std::to_string(dnr_iter->get_phenotype()) + ":" + std::to_string(dnr_iter->get_new_allele()) + ":" +
 					std::to_string(count_control)+","+std::to_string(count_case) + ","+std::to_string(count_unknown));
       if (dnr_iter->get_phenotype() == PT_CONTROL) {
 	num_mutations_unaffected++;
@@ -896,6 +805,9 @@ DenovoResult::DenovoResult(const std::string& family_id,
 			   const std::string& father_id,
 			   const std::string& child_id,
 			   const int& phenotype,
+			   const int32_t mother_ind,
+			   const int32_t father_ind,
+			   const int32_t child_ind,
 			   const double& total_ll_no_mutation,
 			   const double& total_ll_one_denovo,
 			   const double& log10prior) {
@@ -903,6 +815,9 @@ DenovoResult::DenovoResult(const std::string& family_id,
   mother_id_ = mother_id;
   father_id_ = father_id;
   child_id_ = child_id;
+  mother_ind_ = mother_ind;
+  father_ind_ = father_ind;
+  child_ind_ = child_ind;
   phenotype_ = phenotype;
   total_ll_no_mutation_ = total_ll_no_mutation;
   total_ll_one_denovo_ = total_ll_one_denovo;
