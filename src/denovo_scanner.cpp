@@ -64,8 +64,8 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
       continue;
     }
     std::stringstream ss;
-    //    ss << "Processing STR region " << str_variant.get_chromosome() << ":" << start << "-" << end;
-    // PrintMessageDieOnError(ss.str(), M_PROGRESS);
+    ss << "Processing STR region " << str_variant.get_chromosome() << ":" << start << "-" << end;
+    PrintMessageDieOnError(ss.str(), M_PROGRESS);
     if (options_.debug)  PrintMessageDieOnError("Checking if we have any samples...", M_PROGRESS);
     if (str_variant.num_samples() == str_variant.num_missing()) {
       std::stringstream ss;
@@ -243,23 +243,31 @@ bool TrioDenovoScanner::check_mutation(const VCF::Variant& str_variant,
   //*** Check new allele enclosing reads ***//
   // First check in child
   std::vector<std::string> enclreads_child_items, items;
-  int child_encl = 0;
+  int encl_child = 0;
+  int total_encl_child = 0;
+  int child_encl_match = 0;
   if (enclreads_child != "NULL") {
     split_by_delim(enclreads_child, '|', enclreads_child_items);
     for (auto item_iter = enclreads_child_items.begin(); item_iter != enclreads_child_items.end(); item_iter++) {
       split_by_delim(*item_iter, ',', items);
       int allele = stoi(items[0]);
       int count = stoi(items[1]);
-      child_encl += count;
-      if (allele == new_allele && count < options_.min_num_encl_child) {
-	if (options_.debug) {cerr << "reject based on child encl" << endl;}
-	return false;
+      total_encl_child += count;
+      if (allele == new_allele) {
+	encl_child = count;
+      }
+      if (allele == repcn_child_a || allele == repcn_child_b) {
+	child_encl_match += count;
       }
       items.clear();
     }
   }
-  if (child_encl < options_.min_total_encl) {
-    if (options_.debug) {cerr << "reject based on child total encl: " << child_encl << endl;}
+  if (total_encl_child < options_.min_total_encl) {
+    if (options_.debug) {cerr << "reject based on child total encl: " << total_encl_child << endl;}
+    return false;
+  }
+  if (encl_child < options_.min_num_encl_child) {
+    if (options_.debug) {cerr << "reject based on child encl: " << encl_child << endl;}
     return false;
   }
   // Then get min in parents
@@ -267,6 +275,8 @@ bool TrioDenovoScanner::check_mutation(const VCF::Variant& str_variant,
   int encl_father = 0;
   int total_encl_mother = 0;
   int total_encl_father = 0;
+  int mother_encl_match = 0;
+  int father_encl_match = 0;
   std::vector<std::string> enclreads_parent_items;
   //cerr << "Before parse: mother " << enclreads_mother << " " << total_encl_mother << " " << encl_mother << endl;
   if (enclreads_mother != "NULL") {
@@ -277,6 +287,9 @@ bool TrioDenovoScanner::check_mutation(const VCF::Variant& str_variant,
       int count = stoi(items[1]);
       if (allele == new_allele) {
 	encl_mother = count;
+      }
+      if (allele == repcn_mother_a || allele == repcn_mother_b) {
+	mother_encl_match += count;
       }
       total_encl_mother += count;
       items.clear();
@@ -295,24 +308,38 @@ bool TrioDenovoScanner::check_mutation(const VCF::Variant& str_variant,
 	encl_father = count;
       }
       total_encl_father += count;
+      if (allele == repcn_father_a || allele == repcn_father_b) {
+	father_encl_match += count;
+      }
       items.clear();
     }
   }
-  //cerr << "After parse: father " << enclreads_father << " " << total_encl_father << " " << encl_father << endl;
+  //  cerr << "After parse: father " << enclreads_father << " " << total_encl_father << " " << encl_father << endl;
   //cerr << "total encl " << total_encl_mother << " " << total_encl_father << endl;
+  //cerr << "max encl " << options_.max_num_encl_parent << endl;
+  // Check purity
+  if (((float)child_encl_match/(float)total_encl_child < options_.min_encl_match) ||
+      ((float)mother_encl_match/(float)total_encl_mother < options_.min_encl_match) ||
+      ((float)father_encl_match/(float)total_encl_father < options_.min_encl_match)) {
+    if (options_.debug) {cerr << "reject based on messy enclosing reads" << endl;}
+    return false;
+  }
+  // Check totals
   if (total_encl_mother < options_.min_total_encl || total_encl_father < options_.min_total_encl) {
     if (options_.debug) {cerr << "reject based on parents total encl" << endl;}
     return false;
   }
-  if (poocase == 2 && encl_father > options_.max_num_encl_parent) {
+  if (poocase == 2 && (encl_father > options_.max_num_encl_parent || (float)encl_father/(float)total_encl_father > options_.max_perc_encl_parent) ) {
     if (options_.debug) {cerr << "reject based on father encl" << " " << encl_father << endl;}
     return false;
   }
-  if (poocase == 3 && encl_mother > options_.max_num_encl_parent) {
+  if (poocase == 3 && (encl_mother > options_.max_num_encl_parent || (float)encl_mother/(float)total_encl_mother > options_.max_perc_encl_parent) ) {
     if (options_.debug) {cerr << "reject based on mother encl" << " " << encl_mother << endl;}
     return false;
   }
-  if (poocase == 4 && (encl_mother > options_.max_num_encl_parent || encl_father > options_.max_num_encl_parent)) {
+  if (poocase == 4 && (encl_mother > options_.max_num_encl_parent || encl_father > options_.max_num_encl_parent ||
+		       (float)encl_mother/(float)total_encl_mother > options_.max_perc_encl_parent ||
+		       (float)encl_father/(float)total_encl_father > options_.max_perc_encl_parent )) {
     if (options_.debug) {cerr << "reject based on either parent encl " << encl_mother << " " << encl_father << endl;}
     return false;
   }
@@ -322,6 +349,7 @@ bool TrioDenovoScanner::check_mutation(const VCF::Variant& str_variant,
     cerr << "new allele " << new_allele << endl;
     cerr  << repcn_mother_a<<","<<repcn_mother_b << " " << repcn_father_a<<","<<repcn_father_b << " " << repcn_child_a<<","<<repcn_child_b << endl;
     cerr << enclreads_mother << " " << enclreads_father << " " << enclreads_child << endl;
+    cerr << flnkreads_mother << " " << flnkreads_father << " " << flnkreads_child << endl;
   }
   return true;
 }

@@ -54,7 +54,11 @@ void show_help() {
 	   << "--min-num-encl-child       Require this many enclosing reads supporting de novo allele.\n" 
 	   << "                           Only works with GangSTR input.\n"
 	   << "--max-num-encl-parent      Discard if more than this many enclosing reads \n"
-	   << "                           support de novo alele in parent. Only works with GangSTR input.\n"
+	   << "                           support de novo allele in parent. Only works with GangSTR input.\n"
+	   << "--max-perc-encl-parent     Discard if more than this percentage enclosing reads \n"
+	   << "                           support de novo allele in parent. Only works with GangSTR input.\n"
+	   << "--min-encl-match           Discard if fewer than this percentage of enclosing reads match the call.\n"
+	   << "                           Only works with GangSTR input.\n"
 	   << "--min-total-encl           Require this many total enclosing reads in each sample\n"
 	   << "                           Only works with GangSTR input.\n"
 	   << "********* Mutation model ***********************\n"
@@ -98,6 +102,8 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_NAIVE,
     OPT_MINNUMENCLCHILD,
     OPT_MAXNUMENCLPARENT,
+    OPT_MAXPERCENCLPARENT,
+    OPT_MINENCLMATCH,
     OPT_MINTOTALENCL,
     OPT_COMBINEALLELES,
     OPT_DEBUG,
@@ -133,6 +139,8 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"naive", 0, 0, OPT_NAIVE},
     {"min-num-encl-child", 1, 0, OPT_MINNUMENCLCHILD},
     {"max-num-encl-parent", 1, 0, OPT_MAXNUMENCLPARENT},
+    {"max-perc-encl-parent", 1, 0, OPT_MAXPERCENCLPARENT},
+    {"min-encl-match", 1, 0, OPT_MINENCLMATCH},
     {"min-total-encl", 1, 0, OPT_MINTOTALENCL},
     {"combine-alleles-by-length", 0, 0, OPT_COMBINEALLELES},
     {"debug", 0, 0, OPT_DEBUG},
@@ -177,8 +185,14 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     case OPT_MINNUMENCLCHILD:
       options->min_num_encl_child = atoi(optarg);
       break;
+    case OPT_MINENCLMATCH:
+      options->min_encl_match = atof(optarg);
+      break;
     case OPT_MAXNUMENCLPARENT:
       options->max_num_encl_parent = atoi(optarg);
+      break;
+    case OPT_MAXPERCENCLPARENT:
+      options->max_perc_encl_parent = atof(optarg);
       break;
     case OPT_MINTOTALENCL:
       options->min_total_encl = atoi(optarg);
