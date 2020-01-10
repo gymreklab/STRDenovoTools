@@ -694,6 +694,11 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   int num_new_affected = 0;
   int num_new_unaffected = 0;
   std::vector<std::string>children_with_mutations;
+  // Transmission info
+  std::vector<int> unaff_tdt_counts_mat(3, 0);
+  std::vector<int> aff_tdt_counts_mat(3, 0);
+  std::vector<int> unaff_tdt_counts_pat(3, 0);
+  std::vector<int> aff_tdt_counts_pat(3, 0);
   for (auto dnr_iter = dnr.begin(); dnr_iter != dnr.end(); dnr_iter++) {
     total_children++;
     bool filter_mutation = false;
@@ -708,7 +713,7 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
     bool is_new = false;
     int long_mother = 0;
     int long_father = 0;
-      dnr_iter->TestTransmission(&long_mother, &long_father);
+    dnr_iter->TestTransmission(&long_mother, &long_father);
     if (dnr_iter->get_poocase() > 1) {
       // Compare to rest of samples
       int new_allele_gb = dnr_iter->get_new_allele()*period - ref_allele_size;
@@ -719,6 +724,13 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
     } else {
       // Get transmission info. Don't bother if there was a mutation
       dnr_iter->TestTransmission(&long_mother, &long_father);
+      if (dnr_iter->get_phenotype() == PT_CASE) {
+	aff_tdt_counts_mat[long_mother] += 1;
+	aff_tdt_counts_pat[long_father] += 1;
+      } else {
+	unaff_tdt_counts_mat[long_mother] += 1;
+	unaff_tdt_counts_pat[long_father] += 1;
+      }
     }
     if (dnr_iter->get_posterior() > options_.posterior_threshold || options_.outputall) {
       all_mutations_file_ << str_variant.get_chromosome() << "\t" << start << "\t"
@@ -784,6 +796,19 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
        << " P-value: " << p_value;
     PrintMessageDieOnError(ss.str(), M_PROGRESS);
   }
+  // Set transmission info (counts for 0=unknown/1=short/2=long mother:father)
+  std::string aff_tdt = std::to_string(aff_tdt_counts_mat[0]) + "/" +
+    std::to_string(aff_tdt_counts_mat[1]) + "/" +
+    std::to_string(aff_tdt_counts_mat[2]) + ":" +
+    std::to_string(aff_tdt_counts_pat[0]) + "/" +
+    std::to_string(aff_tdt_counts_pat[1]) + "/" +
+    std::to_string(aff_tdt_counts_pat[2]);
+  std::string unaff_tdt = std::to_string(unaff_tdt_counts_mat[0]) + "/" +
+    std::to_string(unaff_tdt_counts_mat[1]) + "/" +
+    std::to_string(unaff_tdt_counts_mat[2]) + ":" +
+    std::to_string(unaff_tdt_counts_pat[0]) + "/" +
+    std::to_string(unaff_tdt_counts_pat[1]) + "/" +
+    std::to_string(unaff_tdt_counts_pat[2]);
   // Write output file
   std::string children_with_mutations_string = ".";
   if (children_with_mutations.size() > 0) {
@@ -796,7 +821,8 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
 		 << total_children << "\t" << num_mutations << "\t" << total_mutation_rate << "\t"
 		 << total_affected << "\t" << num_mutations_affected << "\t" << num_new_affected << "\t" << affected_mutation_rate << "\t"
 		 << total_unaffected << "\t" << num_mutations_unaffected << "\t" << num_new_unaffected << "\t" << unaffected_mutation_rate << "\t"
-		 << p_value << "\t" << children_with_mutations_string << "\n";
+		 << p_value << "\t" << children_with_mutations_string << "\t"
+		 << aff_tdt << "\t" << unaff_tdt << "\n";
   locus_summary_.flush();
 }
 

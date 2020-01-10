@@ -143,7 +143,8 @@ class TrioDenovoScanner {
 		   << "total_children\ttotal_mutations\ttotal_mutation_rate\t"
 		   << "affected_children\taffected_mutations\taffected_new_mutations\taffected_mutation_rate\t"
 		   << "unaffected_children\tunaffected_mutations\tunaffected_new_mutations\tunaffected_mutation_rate\t"
-		   << "p-value\tchildren_with_mutations\n";
+		   << "p-value\tchildren_with_mutations"
+		   << "aff_tdt\tunaff_tdt\n";
     all_mutations_file_ << "chrom\tpos\tperiod\tprior\tfamily\tchild\tphenotype\t"
 			<< "posterior\tnewallele\tmutsize\tinparents\tpoocase\tisnew\tcase_count\t"
 			<< "ctrl_count\tunk_count\tchild_gt\tmat_gt\tpat_gt\t"
