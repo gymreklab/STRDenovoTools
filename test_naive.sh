@@ -11,4 +11,4 @@ FAM=/storage/ileena/denovos4/metadata/ssc_4phases_ids.ped
     --gangstr \
     --require-all-children \
     --out test \
-    --naive --min-num-encl-child 2 --max-num-encl-parent 0
+    --naive --min-num-encl-child 2 --max-num-encl-parent 0 --min-total-encl 8 #--debug #--region chr1:2112692-2112705

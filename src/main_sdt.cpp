@@ -55,6 +55,8 @@ void show_help() {
 	   << "                           Only works with GangSTR input.\n"
 	   << "--max-num-encl-parent      Discard if more than this many enclosing reads \n"
 	   << "                           support de novo alele in parent. Only works with GangSTR input.\n"
+	   << "--min-total-encl           Require this many total enclosing reads in each sample\n"
+	   << "                           Only works with GangSTR input.\n"
 	   << "********* Mutation model ***********************\n"
 	   << "--default-prior <FLOAT>    Default log10 mutation rate to use as prior\n"
 	   << "--default-beta <FLOAT>     Default value to use for length constraint\n"
@@ -96,6 +98,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_NAIVE,
     OPT_MINNUMENCLCHILD,
     OPT_MAXNUMENCLPARENT,
+    OPT_MINTOTALENCL,
     OPT_COMBINEALLELES,
     OPT_DEBUG,
     OPT_DEFAULTPRIOR,
@@ -130,6 +133,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     {"naive", 0, 0, OPT_NAIVE},
     {"min-num-encl-child", 1, 0, OPT_MINNUMENCLCHILD},
     {"max-num-encl-parent", 1, 0, OPT_MAXNUMENCLPARENT},
+    {"min-total-encl", 1, 0, OPT_MINTOTALENCL},
     {"combine-alleles-by-length", 0, 0, OPT_COMBINEALLELES},
     {"debug", 0, 0, OPT_DEBUG},
     {"default-prior", 1, 0, OPT_DEFAULTPRIOR},
@@ -175,6 +179,9 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
       break;
     case OPT_MAXNUMENCLPARENT:
       options->max_num_encl_parent = atoi(optarg);
+      break;
+    case OPT_MINTOTALENCL:
+      options->min_total_encl = atoi(optarg);
       break;
     case OPT_COMBINEALLELES:
       options->combine_alleles = true;

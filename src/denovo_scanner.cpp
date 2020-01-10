@@ -49,7 +49,7 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
   while (strvcf.get_next_variant(&str_variant, options_.round_alleles)) {
     // Clear leftovers
     denovo_results.clear();
-    // Get locu sinfo
+    // Get locus info
     if (options_.debug) PrintMessageDieOnError("Getting locus info...", M_PROGRESS);
     int32_t start;
     if (options_.gangstr) {
@@ -64,8 +64,8 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
       continue;
     }
     std::stringstream ss;
-    ss << "Processing STR region " << str_variant.get_chromosome() << ":" << start << "-" << end;
-    PrintMessageDieOnError(ss.str(), M_PROGRESS);
+    //    ss << "Processing STR region " << str_variant.get_chromosome() << ":" << start << "-" << end;
+    // PrintMessageDieOnError(ss.str(), M_PROGRESS);
     if (options_.debug)  PrintMessageDieOnError("Checking if we have any samples...", M_PROGRESS);
     if (str_variant.num_samples() == str_variant.num_missing()) {
       std::stringstream ss;
@@ -122,10 +122,15 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
 	} else if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) && (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
 	  follows_MI = true;
 	}
+	if (!follows_MI && !check_mutation(str_variant,
+					   strvcf.get_sample_index(family_iter->get_mother()),
+					   strvcf.get_sample_index(family_iter->get_father()),
+					   strvcf.get_sample_index(*child_iter))) {
+	  follows_MI = true;
+	}
 	if (options_.debug && !follows_MI) {
 	  cerr << gt_mother_a << "," << gt_mother_b << " " << gt_father_a << "," << gt_father_b << " " << gt_child_a << "," << gt_child_b << endl;
 	}
-	// TODO check encl/flnk reads
 	// Add to results
 	if (follows_MI) {
 	  DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(),
@@ -142,6 +147,183 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
     }
     summarize_results(denovo_results, str_variant);
   }
+}
+
+bool TrioDenovoScanner::check_mutation(const VCF::Variant& str_variant,
+				       const int32_t& mother_ind,
+				       const int32_t& father_ind,
+				       const int32_t& child_ind) {
+  // Extract enclreads and flnkreads
+  std::vector<std::string> enclreads, flnkreads;
+  std::string enclreads_mother, enclreads_father, enclreads_child;
+  std::string flnkreads_mother, flnkreads_father, flnkreads_child;
+  str_variant.get_FORMAT_value_single_string(ENCLREADS_KEY, enclreads);
+  str_variant.get_FORMAT_value_single_string(FLNKREADS_KEY, flnkreads);
+  enclreads_mother = enclreads[mother_ind];
+  enclreads_father = enclreads[father_ind];
+  enclreads_child = enclreads[child_ind];
+  flnkreads_mother = flnkreads[mother_ind];
+  flnkreads_father = flnkreads[father_ind];
+  flnkreads_child = flnkreads[child_ind];
+  // Get allele calls
+  int32_t period; str_variant.get_INFO_value_single_int(PERIOD_KEY, period);
+  int gt_mother_a, gt_mother_b, gt_father_a, gt_father_b, gt_child_a, gt_child_b;
+  int repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b, repcn_child_a, repcn_child_b;
+  int ref_allele_size = (int)str_variant.get_allele(0).size();
+  str_variant.get_genotype(mother_ind, gt_mother_a, gt_mother_b);
+  str_variant.get_genotype(father_ind, gt_father_a, gt_father_b);
+  str_variant.get_genotype(child_ind, gt_child_a, gt_child_b);
+  repcn_mother_a = ((int)str_variant.get_allele(gt_mother_a).size())/period;
+  repcn_mother_b = ((int)str_variant.get_allele(gt_mother_b).size())/period;
+  repcn_father_a = ((int)str_variant.get_allele(gt_father_a).size())/period;
+  repcn_father_b = ((int)str_variant.get_allele(gt_father_b).size())/period;
+  repcn_child_a = ((int)str_variant.get_allele(gt_child_a).size())/period;
+  repcn_child_b = ((int)str_variant.get_allele(gt_child_b).size())/period;
+
+  //*** Figure out the new allele - TODO this can probably be simplified ***//
+  int new_allele = 0;
+  int poocase = -1; // 2=new allele from father, 3=new allele from mother, 4=not in anyone
+  // Case 2: new allele from father.
+  // Allele a in mother only, allele b not in father
+  if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b) &&
+      (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) &&
+      (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b)) {
+    new_allele = repcn_child_b;
+    poocase = 2;
+  } else
+  // Allele b in mother only, allele a not in father
+  if ((repcn_child_b == repcn_mother_a || repcn_child_b == repcn_mother_b) &&
+      (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) &&
+      (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b)) {
+    new_allele = repcn_child_a;
+    poocase = 2;
+  }
+  // Case 3: New allele from mother
+  // Allele a in father only, allele b not in mother
+  if ((repcn_child_a == repcn_father_a || repcn_child_a == repcn_father_b) &&
+      (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b) &&
+      (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b)) {
+    new_allele = repcn_child_b;
+    poocase = 3;
+  }
+  // Allele b in father only, allele a not in mother
+  if ((repcn_child_b == repcn_father_a || repcn_child_b == repcn_father_b) &&
+      (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b) &&
+      (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b)) {
+    new_allele = repcn_child_a;
+    poocase = 3;
+  }
+  // Case 4: new allele not in either parent at all
+  if (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b &&
+      repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) {
+    new_allele = repcn_child_a;
+    poocase = 4;
+  }
+  if (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b &&
+      repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) {
+    new_allele = repcn_child_b;
+    poocase = 4;
+  }
+  if (new_allele == 0) {
+    if (options_.debug) {
+      cerr  << repcn_mother_a<<","<<repcn_mother_b << " " << repcn_father_a<<","<<repcn_father_b << " " << repcn_child_a<<","<<repcn_child_b << endl;
+      cerr << enclreads_mother << " " << enclreads_father << " " << enclreads_child << endl;
+    }
+    PrintMessageDieOnError("Couldn't figure out new allele", M_ERROR);
+    return false;
+  }
+
+  if (options_.debug) {
+    cerr << "checking" << endl;
+    cerr << "new allele " << new_allele << endl;
+    cerr  << repcn_mother_a<<","<<repcn_mother_b << " " << repcn_father_a<<","<<repcn_father_b << " " << repcn_child_a<<","<<repcn_child_b << endl;
+    cerr << enclreads_mother << " " << enclreads_father << " " << enclreads_child << endl;
+  }
+
+  //*** Check new allele enclosing reads ***//
+  // First check in child
+  std::vector<std::string> enclreads_child_items, items;
+  int child_encl = 0;
+  if (enclreads_child != "NULL") {
+    split_by_delim(enclreads_child, '|', enclreads_child_items);
+    for (auto item_iter = enclreads_child_items.begin(); item_iter != enclreads_child_items.end(); item_iter++) {
+      split_by_delim(*item_iter, ',', items);
+      int allele = stoi(items[0]);
+      int count = stoi(items[1]);
+      child_encl += count;
+      if (allele == new_allele && count < options_.min_num_encl_child) {
+	if (options_.debug) {cerr << "reject based on child encl" << endl;}
+	return false;
+      }
+      items.clear();
+    }
+  }
+  if (child_encl < options_.min_total_encl) {
+    if (options_.debug) {cerr << "reject based on child total encl: " << child_encl << endl;}
+    return false;
+  }
+  // Then get min in parents
+  int encl_mother = 0;
+  int encl_father = 0;
+  int total_encl_mother = 0;
+  int total_encl_father = 0;
+  std::vector<std::string> enclreads_parent_items;
+  //cerr << "Before parse: mother " << enclreads_mother << " " << total_encl_mother << " " << encl_mother << endl;
+  if (enclreads_mother != "NULL") {
+    split_by_delim(enclreads_mother, '|', enclreads_parent_items);
+    for (auto item_iter = enclreads_parent_items.begin(); item_iter != enclreads_parent_items.end(); item_iter++) {
+      split_by_delim(*item_iter, ',', items);
+      int allele = stoi(items[0]);
+      int count = stoi(items[1]);
+      if (allele == new_allele) {
+	encl_mother = count;
+      }
+      total_encl_mother += count;
+      items.clear();
+    }
+  }
+  //cerr << "After parse: mother " << enclreads_mother << " " << total_encl_mother << " " << encl_mother << endl;
+  enclreads_parent_items.clear();
+  //  cerr << "Before parse: father " << enclreads_father << " " << total_encl_father << " " << encl_father << endl;
+  if (enclreads_father != "NULL") {
+    split_by_delim(enclreads_father, '|', enclreads_parent_items);
+    for (auto item_iter = enclreads_parent_items.begin(); item_iter != enclreads_parent_items.end(); item_iter++) {
+      split_by_delim(*item_iter, ',', items);
+      int allele = stoi(items[0]);
+      int count = stoi(items[1]);
+      if (allele == new_allele) {
+	encl_father = count;
+      }
+      total_encl_father += count;
+      items.clear();
+    }
+  }
+  //cerr << "After parse: father " << enclreads_father << " " << total_encl_father << " " << encl_father << endl;
+  //cerr << "total encl " << total_encl_mother << " " << total_encl_father << endl;
+  if (total_encl_mother < options_.min_total_encl || total_encl_father < options_.min_total_encl) {
+    if (options_.debug) {cerr << "reject based on parents total encl" << endl;}
+    return false;
+  }
+  if (poocase == 2 && encl_father > options_.max_num_encl_parent) {
+    if (options_.debug) {cerr << "reject based on father encl" << " " << encl_father << endl;}
+    return false;
+  }
+  if (poocase == 3 && encl_mother > options_.max_num_encl_parent) {
+    if (options_.debug) {cerr << "reject based on mother encl" << " " << encl_mother << endl;}
+    return false;
+  }
+  if (poocase == 4 && (encl_mother > options_.max_num_encl_parent || encl_father > options_.max_num_encl_parent)) {
+    if (options_.debug) {cerr << "reject based on either parent encl " << encl_mother << " " << encl_father << endl;}
+    return false;
+  }
+
+  if (options_.debug) {
+    cerr << "passed!" << endl;
+    cerr << "new allele " << new_allele << endl;
+    cerr  << repcn_mother_a<<","<<repcn_mother_b << " " << repcn_father_a<<","<<repcn_father_b << " " << repcn_child_a<<","<<repcn_child_b << endl;
+    cerr << enclreads_mother << " " << enclreads_father << " " << enclreads_child << endl;
+  }
+  return true;
 }
 
 void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,

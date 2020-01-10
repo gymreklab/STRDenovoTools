@@ -56,6 +56,7 @@ Options::Options() {
   naive = false;
   min_num_encl_child = 0;
   max_num_encl_parent = 10000;
+  min_total_encl = 0;
 
   debug = false;
 }

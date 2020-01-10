@@ -95,6 +95,10 @@ class TrioDenovoScanner {
 
   void scan(VCF::VCFReader& strvcf, MutationPriors& priors);
   void naive_scan(VCF::VCFReader& strvcf);
+  bool check_mutation(const VCF::Variant& str_variant,
+		      const int32_t& mother_ind,
+		      const int32_t& father_ind,
+		      const int32_t& child_ind);
   void summarize_results(std::vector<DenovoResult>& dnr,
 			 VCF::Variant& str_variant);
   /*

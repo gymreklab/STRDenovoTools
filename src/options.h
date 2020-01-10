@@ -79,6 +79,7 @@ class Options {
   bool naive;
   int min_num_encl_child;
   int max_num_encl_parent;
+  int min_total_encl;
 
   // debugging
   bool debug;
