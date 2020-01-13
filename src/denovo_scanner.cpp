@@ -606,6 +606,11 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
   int encl_mother, total_encl_mother, mother_encl_match;
   int encl_father, total_encl_father, father_encl_match;
   float encl_reads_perc_parent = 0;;
+
+  if (options.debug) {
+    cerr << "Checking new allele " << new_allele_ << endl;
+    cerr << "child=" << enclreads[child_ind_] << " mother=" << enclreads[mother_ind_] << " father=" << enclreads[father_ind_] << endl;
+  }
   GetEnclosing(enclreads[child_ind_], new_allele_, repcn_child_a, repcn_child_b, &encl_child, &total_encl_child, &child_encl_match);
   GetEnclosing(enclreads[mother_ind_], new_allele_, repcn_mother_a, repcn_mother_b, &encl_mother, &total_encl_mother, &mother_encl_match);
   GetEnclosing(enclreads[father_ind_], new_allele_, repcn_father_a, repcn_father_b, &encl_father, &total_encl_father, &father_encl_match);
