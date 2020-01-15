@@ -9,7 +9,7 @@ MAXMUT = 10
 
 mutfile = sys.argv[1]
 
-data = pd.read_csv(mutfile, delim_whitespace=True, nrows=120000)
+data = pd.read_csv(mutfile, delim_whitespace=True)
 #data = data[data["family"]==13976]
 data = data[data["family"].apply(lambda x: x not in [11022, 12970, 13006, 13949, 13976, 14655, 11042, 11128, 11181, 13191, 13323, 14395])]
 
