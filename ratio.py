@@ -5,11 +5,11 @@
 import pandas as pd
 import sys
 
-MAXMUT = 10
+MAXMUT = 5
 
 mutfile = sys.argv[1]
 
-data = pd.read_csv(mutfile, delim_whitespace=True)
+data = pd.read_csv(mutfile, delim_whitespace=True, skipfooter=1) # skip last line bc my awk statement took too long to finish so file is truncated
 #data = data[data["family"]==13976]
 data = data[data["family"].apply(lambda x: x not in [11022, 12970, 13006, 13949, 13976, 14655, 11042, 11128, 11181, 13191, 13323, 14395])]
 
@@ -17,6 +17,9 @@ data = data[data["family"].apply(lambda x: x not in [11022, 12970, 13006, 13949,
 fam = data.groupby(["chrom","pos","family"], as_index=False).agg({"child": len})
 fam = fam[fam["child"]==1].drop_duplicates()
 data = pd.merge(data, fam[["chrom","pos","family"]], on=["chrom","pos","family"])
+
+# Restrict to ctrls only
+data = data[data["phenotype"]==1]
 
 # Get rid of super mutable loci
 loc = data.groupby(["chrom","pos"], as_index=False).agg({"child": len})
