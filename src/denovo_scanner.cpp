@@ -471,6 +471,12 @@ int DenovoResult::GetMutSize(const int& new_allele, const int& a1, const int& a2
   }
 }
 
+void DenovoResult::GetFRR(const std::string& rcstring, int* frrcount) {
+  std::vector<std::string> items;
+  split_by_delim(rcstring, ',', items);
+  *frrcount = stoi(items[2]);
+}
+
 void DenovoResult::GetEnclosing(const std::string& enclstring, int& new_allele,
 				const int32_t& repcn_a, const int32_t& repcn_b,
 				int* encl_newallele, int* encl_total, int* encl_match) {
@@ -640,7 +646,7 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
       (total_encl_father < options.min_total_encl)) {
     if (options.debug) {cerr << "Reject based on total enclosing" << endl;}
     *filter_mutation = true;
-    return;
+    if (!options.naive_expansion_detection) {return;}
   }
   // Messiness
   if (((float)child_encl_match/(float)total_encl_child < options.min_encl_match) ||
@@ -648,24 +654,63 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
       ((float)father_encl_match/(float)total_encl_father < options.min_encl_match)) {
     if (options.debug) {cerr << "reject based on messy enclosing reads" << endl;}
     *filter_mutation = true;
-    return;
+    if (!options.naive_expansion_detection) {return;}
   }
   // Enclosing matching new allele
   if (encl_child < options.min_num_encl_child) {
     if (options.debug) {cerr << "reject based on child encl: " << encl_child << endl;}
     *filter_mutation = true;
-    return;
+    if (!options.naive_expansion_detection) {return;}
   }
   if (encl_reads_parent_ > options.max_num_encl_parent) {
     if (options.debug) {cerr << "reject based on num encl in parents" << endl;}
     *filter_mutation = true;
-    return;
+    if (!options.naive_expansion_detection) {return;}
   }
   if (encl_reads_perc_parent > options.max_perc_encl_parent) {
     if (options.debug) {cerr << "reject based on perc encl in parents" << endl;}
     *filter_mutation = true;
+    if (!options.naive_expansion_detection) {return;}
+  }
+
+  // If mutation passed already, we're good
+  if (!filter_mutation) {return;}
+  // If not, and we didn't return yet, we're doing expansion detection.
+  if (!options.naive_expansion_detection) {return;}
+
+  // *** Apply naive expansion detection *** //
+  // Extract number of FRRs from RC field and FLNKREADS field
+  std::vector<std::string> readcounts, flnkreads;
+  variant.get_FORMAT_value_single_string(RC_KEY, readcounts);
+  variant.get_FORMAT_value_single_string(FLNKREADS_KEY, flnkreads);
+  int frr_child, frr_mother, frr_father;
+  GetFRR(readcounts[child_ind_], &frr_child);
+  GetFRR(readcounts[mother_ind_], &frr_mother);
+  GetFRR(readcounts[father_ind_], &frr_father);
+  // First, if we see no enclosing reads at all that is a bad sign and we should just quit.
+  // TODO this might not be always desirable
+  if (enclreads[child_ind_] == "NULL" && enclreads[mother_ind_] == "NULL" && enclreads[father_ind_] == "NULL") {
+    cerr << "***Rejecting possible expansion*** " << readcounts[child_ind_] << " " << readcounts[mother_ind_] << " " << readcounts[father_ind_] << endl;
+    cerr << "child=" << enclreads[child_ind_] << " mother=" << enclreads[mother_ind_] << " father=" << enclreads[father_ind_] << endl;
+    cerr << "child=" << flnkreads[child_ind_] << " mother=" << flnkreads[mother_ind_] << " father=" << flnkreads[father_ind_] << endl;
+    *filter_mutation = true;
     return;
   }
+  // Test if child has many FRRs with none in parents
+  int max_parent_frr = 0; // TODO make an option?
+  if (frr_mother > 0 || frr_father > 0 || frr_child > 0) {
+    cerr << "Checking expansion" << endl;
+    cerr << readcounts[child_ind_] << " " << readcounts[mother_ind_] << " " << readcounts[father_ind_] << endl;
+    cerr << "child=" << flnkreads[child_ind_] << " mother=" << flnkreads[mother_ind_] << " father=" << flnkreads[father_ind_] << endl;
+  }
+  if (frr_mother <= max_parent_frr && frr_father <= max_parent_frr && frr_child >= options.min_exp_frr) {
+    cerr << "***Found possible expansion*** " << readcounts[child_ind_] << " " << readcounts[mother_ind_] << " " << readcounts[father_ind_] << endl;
+    cerr << "child=" << enclreads[child_ind_] << " mother=" << enclreads[mother_ind_] << " father=" << enclreads[father_ind_] << endl;
+    cerr << "child=" << flnkreads[child_ind_] << " mother=" << flnkreads[mother_ind_] << " father=" << flnkreads[father_ind_] << endl;
+    *filter_mutation = false;
+    posterior_ = -1; // TODO for now, so we can easily find
+  }
+  return;
 }
 
 void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,

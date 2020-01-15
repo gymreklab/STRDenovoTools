@@ -109,6 +109,7 @@ class DenovoResult {
   void GetEnclosing(const std::string& enclstring, int& new_allele,
 		    const int32_t& repcn_a, const int32_t& repcn_b,
 		    int* encl_newallele, int* encl_total, int* encl_match);
+  void GetFRR(const std::string& rcstring, int* frrcount);
 		    
 
   // New allele info and POO

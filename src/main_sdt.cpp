@@ -62,6 +62,8 @@ void show_help() {
 	   << "--min-total-encl           Require this many total enclosing reads in each sample\n"
 	   << "                           Only works with GangSTR input.\n"
 	   << "--filter-hom               Filter calls where child is homozygous for new allele\n"
+	   << "--naive-expansions-frr <int> Use naive method to detect expansions. Look for <int> FRRs in child, 0 in parents.\n"
+	   << "                           Only works with GangSTR input.\n"
 	   << "********* Mutation model ***********************\n"
 	   << "--default-prior <FLOAT>    Default log10 mutation rate to use as prior\n"
 	   << "--default-beta <FLOAT>     Default value to use for length constraint\n"
@@ -100,6 +102,7 @@ void show_help() {
 
 void parse_commandline_options(int argc, char* argv[], Options* options) {
   enum LONG_OPTIONS {
+    OPT_NAIVEEXPANSIONFRR,
     OPT_NAIVE,
     OPT_MINNUMENCLCHILD,
     OPT_MAXNUMENCLPARENT,
@@ -138,6 +141,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_VERSION,
   };
   static struct option long_options[] = {
+    {"naive-expansions-frr", 1, 0, OPT_NAIVEEXPANSIONFRR},
     {"naive", 0, 0, OPT_NAIVE},
     {"min-num-encl-child", 1, 0, OPT_MINNUMENCLCHILD},
     {"max-num-encl-parent", 1, 0, OPT_MAXNUMENCLPARENT},
@@ -182,6 +186,10 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
                    long_options, &option_index);
   while (ch != -1) {
     switch (ch) {
+    case OPT_NAIVEEXPANSIONFRR:
+      options->naive_expansion_detection = true;
+      options->min_exp_frr = atoi(optarg);
+      break;
     case OPT_NAIVE:
       options->naive = true;
       break;

@@ -83,6 +83,8 @@ class Options {
   float min_encl_match;
   int min_total_encl;
   bool filter_hom;
+  bool naive_expansion_detection;
+  int min_exp_frr;
 
   // debugging
   bool debug;

@@ -60,6 +60,8 @@ Options::Options() {
   min_encl_match = 0.0;
   min_total_encl = 0;
   filter_hom = false;
+  naive_expansion_detection = false;
+  min_exp_frr = 1;
 
   debug = false;
 }
