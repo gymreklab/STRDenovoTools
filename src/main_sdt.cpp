@@ -63,6 +63,7 @@ void show_help() {
 	   << "                           Only works with GangSTR input.\n"
 	   << "--filter-hom               Filter calls where child is homozygous for new allele\n"
 	   << "--naive-expansions-frr <int1,int2> Use naive method to detect expansions.\n"
+	   << "                           Look for <int1> FRRs in child and none in parent. If not:\n"
 	   << "                           Look for <int2> flanks in child greater than largest parent allele\n"
 	   << "                           Only works with GangSTR input.\n"
 	   << "********* Mutation model ***********************\n"
