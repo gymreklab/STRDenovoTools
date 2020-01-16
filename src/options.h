@@ -85,6 +85,7 @@ class Options {
   bool filter_hom;
   bool naive_expansion_detection;
   int min_exp_frr;
+  int min_exp_flnk;
 
   // debugging
   bool debug;

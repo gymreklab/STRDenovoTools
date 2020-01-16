@@ -400,6 +400,44 @@ void DenovoResult::GetRepcn(const VCF::Variant& variant, const int32_t& sample_i
   *repcn_b = ((int)variant.get_allele(gt_b).size())/period;
 }
 
+int DenovoResult::GetMaxFlankAllele(const std::string flnkstring) {
+  if (flnkstring == "NULL") {
+    return 0;
+  }
+  int maxallele = 0;
+  std::vector<std::string> flnkreads_items, items;
+  split_by_delim(flnkstring, '|', flnkreads_items);
+  for (auto item_iter = flnkreads_items.begin(); item_iter != flnkreads_items.end(); item_iter++) {
+    items.clear();
+    split_by_delim(*item_iter, ',' ,items);
+    int a = stoi(items[0]);
+    int count = stoi(items[1]);
+    if (a > maxallele) {
+      maxallele = a;
+    }
+  }
+  return maxallele;
+}
+
+int DenovoResult::GetFlankLargerThan(const std::string flnkstring, const int& allele) {
+  if (flnkstring == "NULL") {
+    return 0;
+  }
+  int totalcount = 0;
+  std::vector<std::string> flnkreads_items, items;
+  split_by_delim(flnkstring, '|', flnkreads_items);
+  for (auto item_iter = flnkreads_items.begin(); item_iter != flnkreads_items.end(); item_iter++) {
+    items.clear();
+    split_by_delim(*item_iter, ',' ,items);
+    int a = stoi(items[0]);
+    int count = stoi(items[1]);
+    if (a > allele) {
+      totalcount += count;
+    }
+  }
+  return totalcount;
+}
+
 int DenovoResult::GetTrans(const int& child, const int& p1, const int& p2) {
   if (child == p1) {
     if (p1 == p2) {
@@ -678,7 +716,7 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
   // If not, and we didn't return yet, we're doing expansion detection.
   if (!options.naive_expansion_detection) {return;}
 
-  // *** Apply naive expansion detection *** //
+  // *** Apply naive expansion detection - first looking at FRR *** //
   // Extract number of FRRs from RC field and FLNKREADS field
   std::vector<std::string> readcounts, flnkreads;
   variant.get_FORMAT_value_single_string(RC_KEY, readcounts);
@@ -688,27 +726,39 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
   GetFRR(readcounts[mother_ind_], &frr_mother);
   GetFRR(readcounts[father_ind_], &frr_father);
   // First, if we see no enclosing reads at all that is a bad sign and we should just quit.
-  // TODO this might not be always desirable
+  // Note this might not be always desirable
   if (enclreads[child_ind_] == "NULL" && enclreads[mother_ind_] == "NULL" && enclreads[father_ind_] == "NULL") {
-    cerr << "***Rejecting possible expansion*** " << readcounts[child_ind_] << " " << readcounts[mother_ind_] << " " << readcounts[father_ind_] << endl;
-    cerr << "child=" << enclreads[child_ind_] << " mother=" << enclreads[mother_ind_] << " father=" << enclreads[father_ind_] << endl;
-    cerr << "child=" << flnkreads[child_ind_] << " mother=" << flnkreads[mother_ind_] << " father=" << flnkreads[father_ind_] << endl;
+    //    cerr << "***Rejecting possible expansion*** " << readcounts[child_ind_] << " " << readcounts[mother_ind_] << " " << readcounts[father_ind_] << endl;
+    //cerr << "child=" << enclreads[child_ind_] << " mother=" << enclreads[mother_ind_] << " father=" << enclreads[father_ind_] << endl;
+    //cerr << "child=" << flnkreads[child_ind_] << " mother=" << flnkreads[mother_ind_] << " father=" << flnkreads[father_ind_] << endl;
     *filter_mutation = true;
     return;
   }
   // Test if child has many FRRs with none in parents
   int max_parent_frr = 0; // TODO make an option?
-  if (frr_mother > 0 || frr_father > 0 || frr_child > 0) {
-    cerr << "Checking expansion" << endl;
-    cerr << readcounts[child_ind_] << " " << readcounts[mother_ind_] << " " << readcounts[father_ind_] << endl;
-    cerr << "child=" << flnkreads[child_ind_] << " mother=" << flnkreads[mother_ind_] << " father=" << flnkreads[father_ind_] << endl;
-  }
   if (frr_mother <= max_parent_frr && frr_father <= max_parent_frr && frr_child >= options.min_exp_frr) {
+    //    cerr << "***Found possible expansion*** " << readcounts[child_ind_] << " " << readcounts[mother_ind_] << " " << readcounts[father_ind_] << endl;
+    //cerr << "child=" << enclreads[child_ind_] << " mother=" << enclreads[mother_ind_] << " father=" << enclreads[father_ind_] << endl;
+    //cerr << "child=" << flnkreads[child_ind_] << " mother=" << flnkreads[mother_ind_] << " father=" << flnkreads[father_ind_] << endl;
+    *filter_mutation = false;
+    posterior_ = -1; // TODO for now, so we can easily find
+    return;
+  }
+
+  // *** Apply naive expansion detection - second looking at flanks *** //
+  // First get max parent allele size either in flanks or enclosing
+  int max_parent_allele = std::max(std::max(GetMaxFlankAllele(enclreads[mother_ind_]), GetMaxFlankAllele(enclreads[father_ind_])), 
+				   std::max(GetMaxFlankAllele(flnkreads[mother_ind_]), GetMaxFlankAllele(flnkreads[father_ind_])));
+  // Then get num child flank reads > max parent allele size
+  int num_large_child_flank = GetFlankLargerThan(flnkreads[child_ind_], max_parent_allele);
+  if (num_large_child_flank >= options.min_exp_flnk) {
     cerr << "***Found possible expansion*** " << readcounts[child_ind_] << " " << readcounts[mother_ind_] << " " << readcounts[father_ind_] << endl;
+    cerr << "child=" << child_gt_ << " mother="<< mat_gt_ << " father=" << pat_gt_ << endl;
     cerr << "child=" << enclreads[child_ind_] << " mother=" << enclreads[mother_ind_] << " father=" << enclreads[father_ind_] << endl;
     cerr << "child=" << flnkreads[child_ind_] << " mother=" << flnkreads[mother_ind_] << " father=" << flnkreads[father_ind_] << endl;
     *filter_mutation = false;
     posterior_ = -1; // TODO for now, so we can easily find
+    return;
   }
   return;
 }

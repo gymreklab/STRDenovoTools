@@ -62,6 +62,7 @@ Options::Options() {
   filter_hom = false;
   naive_expansion_detection = false;
   min_exp_frr = 1;
+  min_exp_flnk = 10;
 
   debug = false;
 }

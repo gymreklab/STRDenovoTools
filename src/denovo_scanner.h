@@ -78,6 +78,8 @@ class DenovoResult {
   // 0=unknown, 1=shorter, 2=longer
   void TestTransmission(int* long_mother, int* long_father);
   int GetTrans(const int& child, const int& p1, const int& p2);
+  int GetFlankLargerThan(const std::string flnkstring, const int& allele);
+  int GetMaxFlankAllele(const std::string flnkstring);
 
  private:
   static std::string PERIOD_KEY;

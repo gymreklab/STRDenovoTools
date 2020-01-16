@@ -31,7 +31,10 @@ data = data[data["poocase"] != 4]
 
 # Get rid of homozygous child genotypes
 data["is.hom"] = data.apply(lambda x: len(set(x["child_gt"].split(",")))==1, 1)
-data = data[~data["is.hom"]]
+data = data[~(data["is.hom"])]
+
+# Filter to things that aren't super short since those are sketchy
+#data = data[data.apply(lambda x: min([int(item) for item in x["child_gt"].split(",")])>5, 1)]
 
 # Get ratio for each period
 for period in range(1, 7):
@@ -42,6 +45,17 @@ for period in range(1, 7):
     print(num_mother)
     print(num_father/num_mother)
 
+# Do by family
+for family in set(data["family"]):
+    print("family=%s"%family)
+    num_father = data[(data["family"]==family) & (data["poocase"]==2)].shape[0]
+    num_mother = data[(data["family"]==family) & (data["poocase"]==3)].shape[0]
+    print(num_father)
+    print(num_mother)
+    if num_mother > 0:
+        print(num_father/num_mother)
+    
 # Debug some
-print(data[(data["poocase"]==2) & (data["period"]==2)][["chrom","pos","family","child","child_gt","mat_gt","pat_gt","poocase"]])
-print(data[(data["poocase"]==3) & (data["period"]==2)][["chrom","pos","family","child","child_gt","mat_gt","pat_gt","poocase"]])
+cols = ["chrom","pos","family","child","child_gt","mat_gt","pat_gt","poocase","mutsize","encl_child","encl_mother","encl_father"]
+print(data[(data["poocase"]==2) & (data["period"]==4)][cols])
+print(data[(data["poocase"]==3) & (data["period"]==4)][cols])

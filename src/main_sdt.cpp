@@ -62,7 +62,8 @@ void show_help() {
 	   << "--min-total-encl           Require this many total enclosing reads in each sample\n"
 	   << "                           Only works with GangSTR input.\n"
 	   << "--filter-hom               Filter calls where child is homozygous for new allele\n"
-	   << "--naive-expansions-frr <int> Use naive method to detect expansions. Look for <int> FRRs in child, 0 in parents.\n"
+	   << "--naive-expansions-frr <int1,int2> Use naive method to detect expansions.\n"
+	   << "                           Look for <int2> flanks in child greater than largest parent allele\n"
 	   << "                           Only works with GangSTR input.\n"
 	   << "********* Mutation model ***********************\n"
 	   << "--default-prior <FLOAT>    Default log10 mutation rate to use as prior\n"
@@ -184,11 +185,15 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
   int option_index = 0;
   ch = getopt_long(argc, argv, "hv?",
                    long_options, &option_index);
+  std::vector<std::string> eitems;
   while (ch != -1) {
     switch (ch) {
     case OPT_NAIVEEXPANSIONFRR:
       options->naive_expansion_detection = true;
-      options->min_exp_frr = atoi(optarg);
+      eitems.clear();
+      split_by_delim(optarg, ',', eitems);
+      options->min_exp_frr = stoi(eitems[0]);
+      options->min_exp_flnk = stoi(eitems[1]);
       break;
     case OPT_NAIVE:
       options->naive = true;
