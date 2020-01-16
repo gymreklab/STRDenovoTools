@@ -36,6 +36,10 @@ const std::string MALLREADS_KEY   = "MALLREADS";
 const std::string GB_KEY          = "GB";
 std::string START_INFO_TAG        = "START";
 std::string STOP_INFO_TAG         = "END";
+const std::string REPCN_KEY       = "REPCN";
+const std::string ENCLREADS_KEY   = "ENCLREADS";
+const std::string FLNKREADS_KEY   = "FLNKREADS";
+const std::string RC_KEY          = "RC";
 
 // Because HipSTR extends putative STR regions if there are nearby indels, the STR coordinates in the VCF may
 // not exactly match the original reference region coordinates. As a result, when looking for a particular STR region,

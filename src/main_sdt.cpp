@@ -43,11 +43,29 @@ bool file_exists(const std::string& path){
 void show_help() {
   std::stringstream help_msg;
   help_msg << "\nSTRDenovoTools [OPTIONS]"
-	   << " --str-vcf <STR VCF file>"
-	   << " --fam <pedigree file>"
-	   << " --out <outprefix>"
+	   << "--str-vcf <STR VCF file>"
+	   << "--fam <pedigree file>"
+	   << "--out <outprefix>"
 	   << "\n\nOptions:\n"
-	   << " --gangstr                 Indicates input VCF is from GangSTR\n"
+	   << "--gangstr                 Indicates input VCF is from GangSTR\n"
+	   << "********* Naive mutation calling ***************\n"
+	   << "--naive                    Use naive mutation calling based on hard calls.\n"
+	   << "                           Only works with GangSTR input.\n"
+	   << "--min-num-encl-child       Require this many enclosing reads supporting de novo allele.\n" 
+	   << "                           Only works with GangSTR input.\n"
+	   << "--max-num-encl-parent      Discard if more than this many enclosing reads \n"
+	   << "                           support de novo allele in parent. Only works with GangSTR input.\n"
+	   << "--max-perc-encl-parent     Discard if more than this percentage enclosing reads \n"
+	   << "                           support de novo allele in parent. Only works with GangSTR input.\n"
+	   << "--min-encl-match           Discard if fewer than this percentage of enclosing reads match the call.\n"
+	   << "                           Only works with GangSTR input.\n"
+	   << "--min-total-encl           Require this many total enclosing reads in each sample\n"
+	   << "                           Only works with GangSTR input.\n"
+	   << "--filter-hom               Filter calls where child is homozygous for new allele\n"
+	   << "--naive-expansions-frr <int1,int2> Use naive method to detect expansions.\n"
+	   << "                           Look for <int1> FRRs in child and none in parent. If not:\n"
+	   << "                           Look for <int2> flanks in child greater than largest parent allele\n"
+	   << "                           Only works with GangSTR input.\n"
 	   << "********* Mutation model ***********************\n"
 	   << "--default-prior <FLOAT>    Default log10 mutation rate to use as prior\n"
 	   << "--default-beta <FLOAT>     Default value to use for length constraint\n"
@@ -86,6 +104,14 @@ void show_help() {
 
 void parse_commandline_options(int argc, char* argv[], Options* options) {
   enum LONG_OPTIONS {
+    OPT_NAIVEEXPANSIONFRR,
+    OPT_NAIVE,
+    OPT_MINNUMENCLCHILD,
+    OPT_MAXNUMENCLPARENT,
+    OPT_MAXPERCENCLPARENT,
+    OPT_MINENCLMATCH,
+    OPT_MINTOTALENCL,
+    OPT_FILTERHOM,
     OPT_COMBINEALLELES,
     OPT_DEBUG,
     OPT_DEFAULTPRIOR,
@@ -117,6 +143,14 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_VERSION,
   };
   static struct option long_options[] = {
+    {"naive-expansions-frr", 1, 0, OPT_NAIVEEXPANSIONFRR},
+    {"naive", 0, 0, OPT_NAIVE},
+    {"min-num-encl-child", 1, 0, OPT_MINNUMENCLCHILD},
+    {"max-num-encl-parent", 1, 0, OPT_MAXNUMENCLPARENT},
+    {"max-perc-encl-parent", 1, 0, OPT_MAXPERCENCLPARENT},
+    {"min-encl-match", 1, 0, OPT_MINENCLMATCH},
+    {"min-total-encl", 1, 0, OPT_MINTOTALENCL},
+    {"filter-hom", 0, 0, OPT_FILTERHOM},
     {"combine-alleles-by-length", 0, 0, OPT_COMBINEALLELES},
     {"debug", 0, 0, OPT_DEBUG},
     {"default-prior", 1, 0, OPT_DEFAULTPRIOR},
@@ -152,8 +186,37 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
   int option_index = 0;
   ch = getopt_long(argc, argv, "hv?",
                    long_options, &option_index);
+  std::vector<std::string> eitems;
   while (ch != -1) {
     switch (ch) {
+    case OPT_NAIVEEXPANSIONFRR:
+      options->naive_expansion_detection = true;
+      eitems.clear();
+      split_by_delim(optarg, ',', eitems);
+      options->min_exp_frr = stoi(eitems[0]);
+      options->min_exp_flnk = stoi(eitems[1]);
+      break;
+    case OPT_NAIVE:
+      options->naive = true;
+      break;
+    case OPT_MINNUMENCLCHILD:
+      options->min_num_encl_child = atoi(optarg);
+      break;
+    case OPT_MINENCLMATCH:
+      options->min_encl_match = atof(optarg);
+      break;
+    case OPT_MAXNUMENCLPARENT:
+      options->max_num_encl_parent = atoi(optarg);
+      break;
+    case OPT_MAXPERCENCLPARENT:
+      options->max_perc_encl_parent = atof(optarg);
+      break;
+    case OPT_MINTOTALENCL:
+      options->min_total_encl = atoi(optarg);
+      break;
+    case OPT_FILTERHOM:
+      options->filter_hom = true;
+      break;
     case OPT_COMBINEALLELES:
       options->combine_alleles = true;
       break;
@@ -278,8 +341,8 @@ int main(int argc, char* argv[]) {
       PrintMessageDieOnError("combine-alleles ignored for GangSTR files", M_WARNING);
       options.combine_alleles = false;
     }
-    // TODO other command line items we need to check for gangstr
   }
+
   // Load STR VCF file
   if (!file_exists(options.strvcf)) {
     PrintMessageDieOnError("STR vcf file " + options.strvcf + " does not exist.", M_ERROR);
@@ -303,16 +366,19 @@ int main(int argc, char* argv[]) {
   }
   pedigree_set.PrintStatus();
 
-  // Set up priors
-  PrintMessageDieOnError("Opening priors file...", M_PROGRESS);
-  MutationPriors priors(options.default_prior, options.default_beta,
-			options.default_pgeom, options.default_central,
-			options.priors_file);
-
   // Run denovo analysis, based on trios
   PrintMessageDieOnError("Running de novo analysis...", M_PROGRESS);
   TrioDenovoScanner denovo_scanner(pedigree_set, options);
-  denovo_scanner.scan(strvcf, priors);
+  if (options.naive) {
+    denovo_scanner.naive_scan(strvcf);
+  } else {
+    // Set up priors
+    PrintMessageDieOnError("Opening priors file...", M_PROGRESS);
+    MutationPriors priors(options.default_prior, options.default_beta,
+			  options.default_pgeom, options.default_central,
+			  options.priors_file);
+    denovo_scanner.scan(strvcf, priors);
+  }
 
   // Tear down
   total_time = (clock() - total_time)/CLOCKS_PER_SEC;

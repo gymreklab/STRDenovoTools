@@ -53,6 +53,17 @@ Options::Options() {
   default_pgeom = 1.0;
   default_central = 0;
 
+  naive = false;
+  min_num_encl_child = 0;
+  max_num_encl_parent = 10000;
+  max_perc_encl_parent = 1.0;
+  min_encl_match = 0.0;
+  min_total_encl = 0;
+  filter_hom = false;
+  naive_expansion_detection = false;
+  min_exp_frr = 1;
+  min_exp_flnk = 10;
+
   debug = false;
 }
 

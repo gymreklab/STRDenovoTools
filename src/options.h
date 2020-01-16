@@ -75,6 +75,18 @@ class Options {
   double default_pgeom;
   int default_central;
 
+  // Naive mutation calling
+  bool naive;
+  int min_num_encl_child;
+  int max_num_encl_parent;
+  float max_perc_encl_parent;
+  float min_encl_match;
+  int min_total_encl;
+  bool filter_hom;
+  bool naive_expansion_detection;
+  int min_exp_frr;
+  int min_exp_flnk;
+
   // debugging
   bool debug;
 };

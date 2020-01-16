@@ -40,6 +40,10 @@ extern const std::string MALLREADS_KEY;
 extern const std::string GB_KEY;
 extern std::string START_INFO_TAG;
 extern std::string STOP_INFO_TAG;
+extern const std::string REPCN_KEY;
+extern const std::string ENCLREADS_KEY;
+extern const std::string FLNKREADS_KEY;
+extern const std::string RC_KEY;
 extern const int32_t pad;
 
 //bool read_vcf_alleles(VCF::VCFReader* ref_vcf, const Region& region, std::vector<std::string>& alleles, int32_t& pos);
