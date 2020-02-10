@@ -13,13 +13,13 @@ The Dockerfile in this container sets up a Docker with GangSTR installed. You ca
 
 Run the following command to install:
 
-git clone https://github.com/gymreklab/STRDenovoTools
-cd STRDenovoTools
-./reconf
-./configure
-make
-make install
-cd ..
+git clone https://github.com/gymreklab/STRDenovoTools  
+cd STRDenovoTools  
+./reconf  
+./configure  
+make  
+make install  
+cd ..  
 
 ## Usage
 CookieMonSTR --help
