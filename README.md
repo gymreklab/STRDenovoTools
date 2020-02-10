@@ -42,3 +42,5 @@ CookieMonSTR \
     --min-num-encl-child 3 --max-perc-encl-parent 0.05 --min-encl-match 0.9 --min-total-encl 10 \
     --out test_results.txt
 ```
+
+The file used for --fam should be in pedigree file format (see more information here: https://gatk.broadinstitute.org/hc/en-us/articles/360035531972-PED-Pedigree-format).
