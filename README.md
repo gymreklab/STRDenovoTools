@@ -12,7 +12,7 @@ The Dockerfile in this container sets up a Docker with GangSTR installed. You ca
 ## Install
 
 Run the following command to install:
-
+```
 git clone https://github.com/gymreklab/STRDenovoTools  
 cd STRDenovoTools  
 ./reconf  
@@ -20,11 +20,15 @@ cd STRDenovoTools
 make  
 make install  
 cd ..  
+```
 
 ## Usage
+```
 CookieMonSTR --help
+```
 
 Example:
+```
 CookieMonSTR \
     --strvcf test.vcf.gz \
     --fam family.ped \
@@ -37,3 +41,4 @@ CookieMonSTR \
     --naive-expansions-frr 3,8 \
     --min-num-encl-child 3 --max-perc-encl-parent 0.05 --min-encl-match 0.9 --min-total-encl 10 \
     --out test_results.txt
+```
