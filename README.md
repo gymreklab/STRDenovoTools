@@ -1,6 +1,7 @@
 # MonSTR: de novo tandem repeat mutations discovery.
 
-#### Authors: * Ileena Mitra <ilmitra@ucsd.edu> * Melissa Gymrek <mgymrek@ucsd.edu> <br> License: GNU v2
+#### Authors: * Ileena Mitra <ilmitra@ucsd.edu> * Melissa Gymrek <mgymrek@ucsd.edu> <br>  
+License: MIT
 
 
 Toolkit for calling and analyzing de novo tandem repeat mutations.
@@ -27,6 +28,21 @@ cd ..
 ```
 
 ## Software Dependencies
+* https://github.com/samtools/htslib
+* autotools-dev 
+* automake 
+* libtool libtool-bin 
+* libgsl-dev
+
+Run the following command to install dependencies:
+```
+ apt-get install -qqy \
+  autotools-dev \
+  automake \
+  libtool libtool-bin \
+  libgsl-dev
+```
+
 
 ## Usage
 ```
@@ -51,6 +67,9 @@ CookieMonSTR \
 
 The file used for --fam should be in pedigree file format (see more information here: https://gatk.broadinstitute.org/hc/en-us/articles/360035531972-PED-Pedigree-format).
 
+The output file (--out) will be a tab delimited text file with the following columns:
+chromosome,	start position,	TR repeat unit,	prior used for model, family ID, child ID, phenotype, posterior mutation probability, de novo allele observed, mutation size, observed in parents, parent of orgin, is rare allele, number of times observed in cases, in controls,	in unknown phenotype, child's genotype, mother's genotype, father's genotype, number of enclosing reads in child, in mother, in father, enclosing reads in parents, allele type from mother, allele type from father.
+
 ## Cite 
 If you use this method for your research, please cite:
-Mitra, et al. 2020 
+Mitra, et al. 2020. 
