@@ -160,6 +160,10 @@ class TrioDenovoScanner {
   void naive_scan(VCF::VCFReader& strvcf);
   void summarize_results(std::vector<DenovoResult>& dnr,
 			 VCF::Variant& str_variant);
+  bool GetFollowsMI(const int& gt_mother_a, const int& gt_mother_b,
+		    const int& gt_father_a, const int& gt_father_b,
+		    const int& gt_child_a, const int& gt_child_b,
+		    bool is_chrx, const int& child_sex);
 };
 
 

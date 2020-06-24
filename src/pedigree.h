@@ -48,11 +48,14 @@ class NuclearFamily {
   NuclearFamily(const std::string& family_id,
 		const std::string& mother, const std::string& father,
 		const std::vector<std::string>& children,
-		const std::vector<int>& children_status);
+		const std::vector<int>& children_status,
+		const std::vector<int>& children_sex);
   virtual ~NuclearFamily();
 
   const int get_child_phenotype(const std::string& child_id);
+  const int get_child_sex(const std::string& child_id);
   const std::vector<int>& GetChildrenStatus() const {return children_status_;}
+  const std::vector<int>& GetChildrenSex() const {return children_sex_;}
   const std::string& get_family_id() const { return family_id_; }
   const std::string& get_mother()    const { return mother_; }
   const std::string& get_father()    const { return father_; }
@@ -65,6 +68,7 @@ class NuclearFamily {
   std::string mother_, father_;
   std::vector<std::string> children_;  
   std::vector<int> children_status_;
+  std::vector<int> children_sex_;
 };
 
 class PedigreeSet {

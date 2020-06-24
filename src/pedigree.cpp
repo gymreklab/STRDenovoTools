@@ -109,12 +109,19 @@ PedigreeSet::~PedigreeSet() {}
 NuclearFamily::NuclearFamily(const std::string& family_id,
 			     const std::string& mother, const std::string& father,
 			     const std::vector<std::string>& children,
-			     const std::vector<int>& children_status) {
+			     const std::vector<int>& children_status,
+			     const std::vector<int>& children_sex) {
   family_id_ = family_id;
   mother_ = mother;
   father_ = father;
   children_ = children;
   children_status_ = children_status;
+  children_sex_ = children_sex;
+}
+
+const int NuclearFamily::get_child_sex(const std::string& child_id) {
+  size_t pos = find(children_.begin(), children_.end(), child_id) - children_.begin();
+  return children_sex_[pos];
 }
 
 const int NuclearFamily::get_child_phenotype(const std::string& child_id) {
@@ -438,10 +445,12 @@ NuclearFamily PedigreeGraph::convert_to_nuclear_family() const {
   std::string mother = no_descendants_[0]->get_mother()->get_name();
   std::string father = no_descendants_[0]->get_father()->get_name();
   std::vector<std::string> children;
+  std::vector<int> children_sex;
   std::vector<int> children_status;
   for (auto node_iter = no_descendants_.begin(); node_iter != no_descendants_.end(); node_iter++) {
     children.push_back((*node_iter)->get_name());
     children_status.push_back((*node_iter)->get_status());
+    children_sex.push_back((*node_iter)->get_sex());
   }
-  return NuclearFamily(no_descendants_[0]->get_family(), mother, father, children, children_status);
+  return NuclearFamily(no_descendants_[0]->get_family(), mother, father, children, children_status, children_sex);
 }

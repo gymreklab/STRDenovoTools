@@ -42,6 +42,28 @@ TrioDenovoScanner::~TrioDenovoScanner() {
   all_mutations_file_.close();
 }
 
+bool TrioDenovoScanner::GetFollowsMI(const int& gt_mother_a, const int& gt_mother_b,
+				     const int& gt_father_a, const int& gt_father_b,
+				     const int& gt_child_a, const int& gt_child_b,
+				     bool is_chrx, const int& child_sex) {
+  bool follows_MI = false;
+  if (is_chrx && child_sex == SEX_MALE) {
+    if (gt_child_a != gt_child_b) {
+      follows_MI = false; // ThIs shouldn't really happen, should be homozygous
+    }
+    if (!(gt_child_a == gt_mother_a || gt_child_a == gt_mother_b)) {
+      follows_MI = false;
+    }
+  } else {
+    if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) && (gt_child_b == gt_father_a || gt_child_b == gt_father_b)) {
+      follows_MI = true;
+    } else if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) && (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
+      follows_MI = true;
+    }
+  }
+  return follows_MI;
+}
+
 void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
   if (options_.debug) PrintMessageDieOnError("Scanning for de novos using naive method...", M_PROGRESS);
   VCF::Variant str_variant;
@@ -117,17 +139,12 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
 	str_variant.get_genotype(*child_iter, gt_child_a, gt_child_b);
 	
 	// Test for Mendelian inheritance
-	bool follows_MI = false;
-	/* GetFollowsMI(gt_mother_a, gt_mother_b,
-		     gt_father_a, gt_father_b,
-		     gt_child_a, gt_child_b,
-		     options_.chrX,
-		     child_sex) */ // TODO fill this in and move logic below to this function
-	if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) && (gt_child_b == gt_father_a || gt_child_b == gt_father_b)) {
-	  follows_MI = true;
-	} else if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) && (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
-	  follows_MI = true;
-	}
+	bool follows_MI = GetFollowsMI(gt_mother_a, gt_mother_b,
+				       gt_father_a, gt_father_b,
+				       gt_child_a, gt_child_b,
+				       options_.chrX,
+				       family_iter->get_child_sex(*child_iter));
+
 	// Add to results
 	if (follows_MI) { // Set dummy values to force posterior to 0
 	  DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(), (*child_iter), 
@@ -324,6 +341,9 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 	      // Iterate over all paternal genotypes
 	      for (int pat_i = 0; pat_i < num_alleles; pat_i++){
 		for (int pat_j = 0; pat_j <= pat_i; pat_j++){
+
+		  if (options_.chrX && (pat_i != pat_j)) { continue;} // ignore case of father heterozygous for chrX
+		  
 		  double pat_ll    = dip_gt_priors->log_unphased_genotype_prior(pat_j, pat_i, family_iter->get_father()) + unphased_gls->get_gl(father_gl_index, pat_j, pat_i);
 		  double config_ll = mat_ll + pat_ll + LOG_ONE_FOURTH;
 		  
@@ -333,8 +353,13 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 		    int mat_allele = (mat_index == 0 ? mat_i : mat_j);
 		    for (int pat_index = 0; pat_index < 2; ++pat_index) {
 		      int pat_allele = (pat_index == 0 ? pat_i : pat_j);
-		      
-		      double no_mutation_config_ll = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mat_allele, pat_allele), std::max(mat_allele, pat_allele));
+
+		      double no_mutation_config_ll;
+		      if (options_.chrX && family_iter->get_child_sex(*child_iter)==SEX_MALE) {
+			no_mutation_config_ll = config_ll + unphased_gls->get_gl(child_gl_index, mat_allele, mat_allele); // homozygous for mom allele
+		      } else {
+			no_mutation_config_ll = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mat_allele, pat_allele), std::max(mat_allele, pat_allele));
+		      }
 		      update_streaming_log_sum_exp(no_mutation_config_ll, ll_no_mutation_max, ll_no_mutation_total);
 		      
 		      // All putative mutations to the maternal allele
@@ -352,17 +377,19 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 			}
 		      }
 		      
-		      // All putative mutations to the paternal allele
-		      double max_ll_pat_mut = config_ll + unphased_gls->get_max_gl_allele_fixed(child_gl_index, mat_allele) +
-			mut_model.max_log_prior_mutation(str_variant.GetSizeFromLengthAllele(pat_allele));
-		      if (max_ll_pat_mut > ll_one_denovo_max - MIN_CONTRIBUTION){
-			for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++){
-			  if (mut_allele == pat_allele)
-			    continue;
-			  double prob = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mat_allele, mut_allele), std::max(mat_allele, mut_allele))
-			    + mut_model.log_prior_mutation(str_variant.GetSizeFromLengthAllele(pat_allele),
-							   str_variant.GetSizeFromLengthAllele(mut_allele));
-			  update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
+		      // All putative mutations to the paternal allele - skip if male chrX
+		      if (!(options_.chrX && family_iter->get_child_sex(*child_iter)==SEX_MALE)) {
+			double max_ll_pat_mut = config_ll + unphased_gls->get_max_gl_allele_fixed(child_gl_index, mat_allele) +
+			  mut_model.max_log_prior_mutation(str_variant.GetSizeFromLengthAllele(pat_allele));
+			if (max_ll_pat_mut > ll_one_denovo_max - MIN_CONTRIBUTION){
+			  for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++){
+			    if (mut_allele == pat_allele)
+			      continue;
+			    double prob = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mat_allele, mut_allele), std::max(mat_allele, mut_allele))
+			      + mut_model.log_prior_mutation(str_variant.GetSizeFromLengthAllele(pat_allele),
+							     str_variant.GetSizeFromLengthAllele(mut_allele));
+			    update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
+			  }
 			}
 		      }
 		    }
