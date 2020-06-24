@@ -63,6 +63,7 @@ Options::Options() {
   naive_expansion_detection = false;
   min_exp_frr = 1;
   min_exp_flnk = 10;
+  chrX = false;
 
   debug = false;
 }
