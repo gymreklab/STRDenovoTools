@@ -118,6 +118,11 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
 	
 	// Test for Mendelian inheritance
 	bool follows_MI = false;
+	/* GetFollowsMI(gt_mother_a, gt_mother_b,
+		     gt_father_a, gt_father_b,
+		     gt_child_a, gt_child_b,
+		     options_.chrX,
+		     child_sex) */ // TODO fill this in and move logic below to this function
 	if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) && (gt_child_b == gt_father_a || gt_child_b == gt_father_b)) {
 	  follows_MI = true;
 	} else if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) && (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
