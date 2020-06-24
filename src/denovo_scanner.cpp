@@ -83,7 +83,7 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
       }
       if (str_variant.sample_call_missing(family_iter->get_mother()) || 
 	  str_variant.sample_call_missing(family_iter->get_father())) {
-	continue; // No point if there are no calls for parents
+        continue; // No point if there are no calls for parents
       }
       // First check we have children we need
       bool scan_for_denovo = true;
@@ -101,12 +101,12 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
       ss << "Found " << num_children_nonmissing << " nonmissing children . Scanning for de novo=" << scan_for_denovo;
       if (options_.debug) PrintMessageDieOnError(ss.str(), M_PROGRESS);
       scan_for_denovo = scan_for_denovo && (num_children_nonmissing > 0);
-
+      
       // Get parent gentoype info
       int gt_mother_a, gt_mother_b, gt_father_a, gt_father_b, gt_child_a, gt_child_b;
       str_variant.get_genotype(family_iter->get_mother(), gt_mother_a, gt_mother_b);
       str_variant.get_genotype(family_iter->get_father(), gt_father_a, gt_father_b);
-
+      
       // Scan each child in the family
       for (auto child_iter = family_iter->get_children().begin(); child_iter != family_iter->get_children().end(); child_iter++) {
 	if (options_.debug) PrintMessageDieOnError("Scanning child...", M_PROGRESS);
@@ -115,7 +115,7 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
 	}
 	// Get child genotype info
 	str_variant.get_genotype(*child_iter, gt_child_a, gt_child_b);
-
+	
 	// Test for Mendelian inheritance
 	bool follows_MI = false;
 	if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) && (gt_child_b == gt_father_a || gt_child_b == gt_father_b)) {
@@ -206,7 +206,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
       str_variant.destroy_record();
       continue;
     }
-
+    
     // Set up
     if (options_.debug) PrintMessageDieOnError("Set up GLs...", M_PROGRESS);
     GL* unphased_gls;
@@ -238,7 +238,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
     double prior_rate = priors.GetPrior(str_variant.get_chromosome(), start);
     const double LOG_ONE_FOURTH = -log10(4);
     const double LOG_TWO        = log10(2);
-
+    
     // Scan each family
     if (options_.debug) PrintMessageDieOnError("Scanning families...", M_PROGRESS);
     for (auto family_iter = families.begin(); family_iter != families.end(); family_iter++) {
@@ -253,7 +253,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
       }
       if (options_.debug) PrintMessageDieOnError("Check children...", M_PROGRESS);
       int num_children_nonmissing = 0;
-
+      
       ss.str("");
       ss << "Before checking children, Scan for de novo=" << scan_for_denovo << " "
 	 << "Mother has data=" << unphased_gls->has_sample(family_iter->get_mother()) << " " << family_iter->get_mother() << " "
@@ -281,7 +281,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
       ss << "Found " << num_children_nonmissing << " nonmissing children . Scanning for de novo=" << scan_for_denovo;
       if (options_.debug) PrintMessageDieOnError(ss.str(), M_PROGRESS);
       scan_for_denovo = scan_for_denovo && (num_children_nonmissing > 0);
-
+      
       // Scan each child in the family
       for (auto child_iter = family_iter->get_children().begin(); child_iter != family_iter->get_children().end(); child_iter++) {
 	double total_ll_no_mutation, total_ll_one_denovo;
@@ -298,44 +298,45 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 	  if (!scan_for_denovo || !unphased_gls->has_sample(*child_iter)) {
 	    continue;
 	  }
+	  
 	  // To accelerate computations, we will ignore configurations that make a neglible contribution (< 0.01%) to the total LL
-	  // For mutational scenarios, we aggregate 1/4*A^2*(A+1)^2*4*2*A values. Therefore, to ignore a configuration with LL=X:
-	  // X*A^3*(A+1)^2*2 < TOTAL/10000;
-	  // logX < log(TOTAL) - log(10000*A^3*(A+1)^2*2) = log(TOTAL) - [log(10000) + 3log(A) + 2log(A+1) + log(2)];
-	  double MIN_CONTRIBUTION   = 4 + 3*log10(num_alleles) + 2*log(num_alleles+1) + LOG_TWO;
-	  double ll_no_mutation_max = -DBL_MAX/2, ll_no_mutation_total = 0.0;
-	  double ll_one_denovo_max  = -DBL_MAX/2, ll_one_denovo_total  = 0.0;
-	  if (options_.debug) PrintMessageDieOnError("Get GL indices...", M_PROGRESS);
-	  int mother_gl_index       = unphased_gls->get_sample_index(family_iter->get_mother());
-	  int father_gl_index       = unphased_gls->get_sample_index(family_iter->get_father());
-	  int child_gl_index        = unphased_gls->get_sample_index(*child_iter);
-	  // Iterate over all maternal genotypes
-	  if (options_.debug) PrintMessageDieOnError("Compute likelihoods...", M_PROGRESS);
-	  for (int mat_i = 0; mat_i < num_alleles; mat_i++){
-	    for (int mat_j = 0; mat_j <= mat_i; mat_j++){
-	      double mat_ll = dip_gt_priors->log_unphased_genotype_prior(mat_j, mat_i, family_iter->get_mother()) + unphased_gls->get_gl(mother_gl_index, mat_j, mat_i);
-
+      	  // For mutational scenarios, we aggregate 1/4*A^2*(A+1)^2*4*2*A values. Therefore, to ignore a configuration with LL=X:
+      	  // X*A^3*(A+1)^2*2 < TOTAL/10000;
+      	  // logX < log(TOTAL) - log(10000*A^3*(A+1)^2*2) = log(TOTAL) - [log(10000) + 3log(A) + 2log(A+1) + log(2)];
+      	  double MIN_CONTRIBUTION   = 4 + 3*log10(num_alleles) + 2*log(num_alleles+1) + LOG_TWO;
+      	  double ll_no_mutation_max = -DBL_MAX/2, ll_no_mutation_total = 0.0;
+      	  double ll_one_denovo_max  = -DBL_MAX/2, ll_one_denovo_total  = 0.0;
+      	  if (options_.debug) PrintMessageDieOnError("Get GL indices...", M_PROGRESS);
+      	  int mother_gl_index       = unphased_gls->get_sample_index(family_iter->get_mother());
+      	  int father_gl_index       = unphased_gls->get_sample_index(family_iter->get_father());
+      	  int child_gl_index        = unphased_gls->get_sample_index(*child_iter);
+      	  // Iterate over all maternal genotypes
+      	  if (options_.debug) PrintMessageDieOnError("Compute likelihoods...", M_PROGRESS);
+      	  for (int mat_i = 0; mat_i < num_alleles; mat_i++){
+      	    for (int mat_j = 0; mat_j <= mat_i; mat_j++){
+      	      double mat_ll = dip_gt_priors->log_unphased_genotype_prior(mat_j, mat_i, family_iter->get_mother()) + unphased_gls->get_gl(mother_gl_index, mat_j, mat_i);
+	      
 	      // Iterate over all paternal genotypes
 	      for (int pat_i = 0; pat_i < num_alleles; pat_i++){
 		for (int pat_j = 0; pat_j <= pat_i; pat_j++){
 		  double pat_ll    = dip_gt_priors->log_unphased_genotype_prior(pat_j, pat_i, family_iter->get_father()) + unphased_gls->get_gl(father_gl_index, pat_j, pat_i);
 		  double config_ll = mat_ll + pat_ll + LOG_ONE_FOURTH;
-
+		  
 		  // Compute total LL for each scenario
 		  // Iterate over all 4 possible inheritance patterns for the child
-		  for (int mat_index = 0; mat_index < 2; ++mat_index){
+		  for (int mat_index = 0; mat_index < 2; ++mat_index) {
 		    int mat_allele = (mat_index == 0 ? mat_i : mat_j);
-		    for (int pat_index = 0; pat_index < 2; ++pat_index){
+		    for (int pat_index = 0; pat_index < 2; ++pat_index) {
 		      int pat_allele = (pat_index == 0 ? pat_i : pat_j);
-
+		      
 		      double no_mutation_config_ll = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mat_allele, pat_allele), std::max(mat_allele, pat_allele));
 		      update_streaming_log_sum_exp(no_mutation_config_ll, ll_no_mutation_max, ll_no_mutation_total);
-
+		      
 		      // All putative mutations to the maternal allele
 		      double max_ll_mat_mut = config_ll + unphased_gls->get_max_gl_allele_fixed(child_gl_index, pat_allele) +
 			mut_model.max_log_prior_mutation(str_variant.GetSizeFromLengthAllele(mat_allele));
-		      if (max_ll_mat_mut > ll_one_denovo_max-MIN_CONTRIBUTION){
-			for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++){
+		      if (max_ll_mat_mut > ll_one_denovo_max-MIN_CONTRIBUTION) {
+			for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++) {
 			  if (mut_allele == mat_allele)
 			    continue;
 			  double prob = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mut_allele, pat_allele),
@@ -345,7 +346,7 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 			  update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
 			}
 		      }
-
+		      
 		      // All putative mutations to the paternal allele
 		      double max_ll_pat_mut = config_ll + unphased_gls->get_max_gl_allele_fixed(child_gl_index, mat_allele) +
 			mut_model.max_log_prior_mutation(str_variant.GetSizeFromLengthAllele(pat_allele));
@@ -383,13 +384,12 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
     if (options_.debug) PrintMessageDieOnError("Done summarizing...", M_PROGRESS);
     delete dip_gt_priors;
     denovo_results.clear();
-
+    
     // Destroy vcf_record_ from variant
     str_variant.destroy_record();
     if (options_.debug) PrintMessageDieOnError("Destroy...", M_PROGRESS);
   }
 }
-
 
 void DenovoResult::GetRepcn(const VCF::Variant& variant, const int32_t& sample_ind,
 			    int* repcn_a, int* repcn_b) {
