@@ -41,6 +41,7 @@ class DenovoResult {
 	       const std::string& father_id,
 	       const std::string& child_id,
 	       const int& phenotype,
+         const int& child_sex,
 	       const int32_t mother_ind,
 	       const int32_t father_ind,
 	       const int32_t child_ind,
@@ -50,6 +51,7 @@ class DenovoResult {
   virtual ~DenovoResult();
 
   const int& get_phenotype() const {return phenotype_;}
+  const int& get_child_sex() const {return child_sex_;}
   const double& get_posterior() const {return posterior_;}
   const double& get_prior() const {return log10_prior_mutation_;}
   const std::string& get_child_id() const {return child_id_;}
@@ -92,6 +94,7 @@ class DenovoResult {
   int32_t father_ind_;
   int32_t child_ind_;
   int phenotype_;
+  int child_sex_;
   double total_ll_no_mutation_;
   double total_ll_one_denovo_;
   double posterior_;
@@ -112,7 +115,7 @@ class DenovoResult {
 		    const int32_t& repcn_a, const int32_t& repcn_b,
 		    int* encl_newallele, int* encl_total, int* encl_match);
   void GetFRR(const std::string& rcstring, int* frrcount);
-		    
+
 
   // New allele info and POO
   int new_allele_ = 0;
@@ -160,6 +163,10 @@ class TrioDenovoScanner {
   void naive_scan(VCF::VCFReader& strvcf);
   void summarize_results(std::vector<DenovoResult>& dnr,
 			 VCF::Variant& str_variant);
+  bool GetFollowsMI(const int& gt_mother_a, const int& gt_mother_b,
+		    const int& gt_father_a, const int& gt_father_b,
+		    const int& gt_child_a, const int& gt_child_b,
+		    bool is_chrx, const int& child_sex);
 };
 
 

@@ -250,7 +250,17 @@ namespace VCF {
 	  missing_.push_back(false);
 	  phased_.push_back(bcf_gt_is_phased(gts_[gt_index+1]));
 	  gt_1_.push_back(bcf_gt_allele(gts_[gt_index]));
-	  gt_2_.push_back(bcf_gt_allele(gts_[gt_index+1]));
+	  // For haploid, set two alleles to be the same.
+	  // This check based on https://github.com/samtools/htslib/blob/cb8a05138e3904f7993d71026d3ee463e0cc80e9/htslib/vcf.h#L1296
+	  // TODO check this. kind of sketchy bc numbers don't exactly match
+	  // bcf_int32_vector_end (-2147483647). 
+	  if ((bcf_gt_allele(gts_[gt_index+1])+1)*2+1 != bcf_int32_vector_end) {
+	    // diploid
+	    gt_2_.push_back(bcf_gt_allele(gts_[gt_index+1]));
+	  } else {
+	    // haploid
+	    gt_2_.push_back(bcf_gt_allele(gts_[gt_index]));
+	  }
 	}
 	gt_index += 2;
       }

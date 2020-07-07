@@ -91,6 +91,7 @@ void show_help() {
 	   << "--use-pop-priors            Get genotype priors from population. \n"
 	   << "--posterior-threshold <FLOAT>  Cutoff to call something de novo. \n"
 	   << "--include-invariant         Output info for loci even if no alt alleles present.\n"
+	   << "--chrX                      Call denovos on chrX.\n"
 	   << "********* Filtering loci ***********************\n"
 	   << "--output-all-loci           Output all loci to mutations file regardless of score.\n"
 	   << "********* Other options ************************\n"
@@ -104,6 +105,7 @@ void show_help() {
 
 void parse_commandline_options(int argc, char* argv[], Options* options) {
   enum LONG_OPTIONS {
+    OPT_CHRX,
     OPT_NAIVEEXPANSIONFRR,
     OPT_NAIVE,
     OPT_MINNUMENCLCHILD,
@@ -143,6 +145,7 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
     OPT_VERSION,
   };
   static struct option long_options[] = {
+    {"chrX", 0, 0, OPT_CHRX},
     {"naive-expansions-frr", 1, 0, OPT_NAIVEEXPANSIONFRR},
     {"naive", 0, 0, OPT_NAIVE},
     {"min-num-encl-child", 1, 0, OPT_MINNUMENCLCHILD},
@@ -189,6 +192,9 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
   std::vector<std::string> eitems;
   while (ch != -1) {
     switch (ch) {
+    case OPT_CHRX:
+      options->chrX = true;
+      break;
     case OPT_NAIVEEXPANSIONFRR:
       options->naive_expansion_detection = true;
       eitems.clear();

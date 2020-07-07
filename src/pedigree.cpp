@@ -109,12 +109,19 @@ PedigreeSet::~PedigreeSet() {}
 NuclearFamily::NuclearFamily(const std::string& family_id,
 			     const std::string& mother, const std::string& father,
 			     const std::vector<std::string>& children,
-			     const std::vector<int>& children_status) {
+			     const std::vector<int>& children_status,
+			     const std::vector<int>& children_sex) {
   family_id_ = family_id;
   mother_ = mother;
   father_ = father;
   children_ = children;
   children_status_ = children_status;
+  children_sex_ = children_sex;
+}
+
+const int NuclearFamily::get_child_sex(const std::string& child_id) {
+  size_t pos = find(children_.begin(), children_.end(), child_id) - children_.begin();
+  return children_sex_[pos];
 }
 
 const int NuclearFamily::get_child_phenotype(const std::string& child_id) {
@@ -204,19 +211,30 @@ bool PedigreeGraph::build(const std::string& filename) {
     } else {
       phenotype_code = PT_MISSING;
     }
+
+    // Get sex code
+    int sex_code;
+    if (sex == "1") {
+      sex_code = SEX_MALE;
+    } else if (sex == "2") {
+      sex_code = SEX_FEMALE;
+    } else {
+      sex_code = SEX_MISSING;
+    }
+
     // Create new nodes for any previously unseen samples that have an identifier other than 0
     if (samples.find(child) == samples.end()){
-      PedigreeNode* new_node = new PedigreeNode(child, family, phenotype_code);
+      PedigreeNode* new_node = new PedigreeNode(child, family, phenotype_code, sex_code);
       nodes.push_back(new_node);
       samples[child] = new_node;
     }
     if (mother.compare("0") != 0 && samples.find(mother) == samples.end()){
-      PedigreeNode* new_node = new PedigreeNode(mother, family, phenotype_code);
+      PedigreeNode* new_node = new PedigreeNode(mother, family, phenotype_code, sex_code);
       samples[mother] = new_node;
       nodes.push_back(new_node);
     }
     if (father.compare("0") != 0 && samples.find(father) == samples.end()){
-      PedigreeNode* new_node = new PedigreeNode(father, family, phenotype_code);
+      PedigreeNode* new_node = new PedigreeNode(father, family, phenotype_code, sex_code);
       samples[father] = new_node;
       nodes.push_back(new_node);
     }
@@ -308,10 +326,11 @@ bool PedigreeGraph::build_subgraph(std::vector<PedigreeNode*>& subgraph_nodes){
     std::string child  = (*node_iter)->get_name();
     std::string family = (*node_iter)->get_family();
     int status = (*node_iter)->get_status();
+    int sex = (*node_iter)->get_sex();
 
     // Create new nodes for any previously unseen samples
     if (samples.find(child) == samples.end()){
-      child_node = new PedigreeNode(child, family, status);
+      child_node = new PedigreeNode(child, family, status, sex);
       samples[child] = child_node;
       nodes.push_back(child_node);
     }
@@ -322,7 +341,7 @@ bool PedigreeGraph::build_subgraph(std::vector<PedigreeNode*>& subgraph_nodes){
       std::string mother = (*node_iter)->get_mother()->get_name();
       int mother_status = (*node_iter)->get_mother()->get_status();
       if (samples.find(mother) == samples.end()){
-	mother_node = new PedigreeNode(mother, family, mother_status);
+	mother_node = new PedigreeNode(mother, family, mother_status, SEX_FEMALE);
 	nodes.push_back(mother_node);
 	samples[mother] = mother_node;
       }
@@ -334,7 +353,7 @@ bool PedigreeGraph::build_subgraph(std::vector<PedigreeNode*>& subgraph_nodes){
       std::string father = (*node_iter)->get_father()->get_name();
       int father_status = (*node_iter)->get_father()->get_status();
       if (samples.find(father) == samples.end()){
-	father_node = new PedigreeNode(father, family, father_status);
+	father_node = new PedigreeNode(father, family, father_status, SEX_MALE);
 	nodes.push_back(father_node);
 	samples[father] = father_node;
       }
@@ -426,10 +445,12 @@ NuclearFamily PedigreeGraph::convert_to_nuclear_family() const {
   std::string mother = no_descendants_[0]->get_mother()->get_name();
   std::string father = no_descendants_[0]->get_father()->get_name();
   std::vector<std::string> children;
+  std::vector<int> children_sex;
   std::vector<int> children_status;
   for (auto node_iter = no_descendants_.begin(); node_iter != no_descendants_.end(); node_iter++) {
     children.push_back((*node_iter)->get_name());
     children_status.push_back((*node_iter)->get_status());
+    children_sex.push_back((*node_iter)->get_sex());
   }
-  return NuclearFamily(no_descendants_[0]->get_family(), mother, father, children, children_status);
+  return NuclearFamily(no_descendants_[0]->get_family(), mother, father, children, children_status, children_sex);
 }

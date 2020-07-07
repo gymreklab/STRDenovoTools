@@ -42,6 +42,28 @@ TrioDenovoScanner::~TrioDenovoScanner() {
   all_mutations_file_.close();
 }
 
+bool TrioDenovoScanner::GetFollowsMI(const int& gt_mother_a, const int& gt_mother_b,
+				     const int& gt_father_a, const int& gt_father_b,
+				     const int& gt_child_a, const int& gt_child_b,
+				     bool is_chrx, const int& child_sex) {
+  bool follows_MI = false;
+  if (is_chrx && child_sex == SEX_MALE) {
+    if (gt_child_a != gt_child_b) {
+      return follows_MI; // ThIs shouldn't really happen, should be homozygous
+    }
+    if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b)) {
+      follows_MI = true;
+    }
+  } else {
+    if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) && (gt_child_b == gt_father_a || gt_child_b == gt_father_b)) {
+      follows_MI = true;
+    } else if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) && (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
+      follows_MI = true;
+    }
+  }
+  return follows_MI;
+}
+
 void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
   if (options_.debug) PrintMessageDieOnError("Scanning for de novos using naive method...", M_PROGRESS);
   VCF::Variant str_variant;
@@ -81,9 +103,9 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
       if (!options_.family.empty() and family_iter->get_family_id() != options_.family) {
 	continue;
       }
-      if (str_variant.sample_call_missing(family_iter->get_mother()) || 
+      if (str_variant.sample_call_missing(family_iter->get_mother()) ||
 	  str_variant.sample_call_missing(family_iter->get_father())) {
-	continue; // No point if there are no calls for parents
+        continue; // No point if there are no calls for parents
       }
       // First check we have children we need
       bool scan_for_denovo = true;
@@ -117,16 +139,17 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
 	str_variant.get_genotype(*child_iter, gt_child_a, gt_child_b);
 
 	// Test for Mendelian inheritance
-	bool follows_MI = false;
-	if ((gt_child_a == gt_mother_a || gt_child_a == gt_mother_b) && (gt_child_b == gt_father_a || gt_child_b == gt_father_b)) {
-	  follows_MI = true;
-	} else if ((gt_child_a == gt_father_a || gt_child_a == gt_father_b) && (gt_child_b == gt_mother_a || gt_child_b == gt_mother_b)) {
-	  follows_MI = true;
-	}
+	bool follows_MI = GetFollowsMI(gt_mother_a, gt_mother_b,
+				       gt_father_a, gt_father_b,
+				       gt_child_a, gt_child_b,
+				       options_.chrX,
+				       family_iter->get_child_sex(*child_iter));
+
 	// Add to results
 	if (follows_MI) { // Set dummy values to force posterior to 0
-	  DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(), (*child_iter), 
+	  DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(), (*child_iter),
 			   family_iter->get_child_phenotype(*child_iter),
+         family_iter->get_child_sex(*child_iter),
 			   strvcf.get_sample_index(family_iter->get_mother()),
 			   strvcf.get_sample_index(family_iter->get_father()),
 			   strvcf.get_sample_index(*child_iter),
@@ -135,6 +158,7 @@ void TrioDenovoScanner::naive_scan(VCF::VCFReader& strvcf) {
 	} else { // Set dummy values to force posterior to 1
 	  DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(), (*child_iter),
 			   family_iter->get_child_phenotype(*child_iter),
+         family_iter->get_child_sex(*child_iter),
 			   strvcf.get_sample_index(family_iter->get_mother()),
 			   strvcf.get_sample_index(family_iter->get_father()),
 			   strvcf.get_sample_index(*child_iter),
@@ -298,44 +322,53 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 	  if (!scan_for_denovo || !unphased_gls->has_sample(*child_iter)) {
 	    continue;
 	  }
+
 	  // To accelerate computations, we will ignore configurations that make a neglible contribution (< 0.01%) to the total LL
-	  // For mutational scenarios, we aggregate 1/4*A^2*(A+1)^2*4*2*A values. Therefore, to ignore a configuration with LL=X:
-	  // X*A^3*(A+1)^2*2 < TOTAL/10000;
-	  // logX < log(TOTAL) - log(10000*A^3*(A+1)^2*2) = log(TOTAL) - [log(10000) + 3log(A) + 2log(A+1) + log(2)];
-	  double MIN_CONTRIBUTION   = 4 + 3*log10(num_alleles) + 2*log(num_alleles+1) + LOG_TWO;
-	  double ll_no_mutation_max = -DBL_MAX/2, ll_no_mutation_total = 0.0;
-	  double ll_one_denovo_max  = -DBL_MAX/2, ll_one_denovo_total  = 0.0;
-	  if (options_.debug) PrintMessageDieOnError("Get GL indices...", M_PROGRESS);
-	  int mother_gl_index       = unphased_gls->get_sample_index(family_iter->get_mother());
-	  int father_gl_index       = unphased_gls->get_sample_index(family_iter->get_father());
-	  int child_gl_index        = unphased_gls->get_sample_index(*child_iter);
-	  // Iterate over all maternal genotypes
-	  if (options_.debug) PrintMessageDieOnError("Compute likelihoods...", M_PROGRESS);
-	  for (int mat_i = 0; mat_i < num_alleles; mat_i++){
-	    for (int mat_j = 0; mat_j <= mat_i; mat_j++){
-	      double mat_ll = dip_gt_priors->log_unphased_genotype_prior(mat_j, mat_i, family_iter->get_mother()) + unphased_gls->get_gl(mother_gl_index, mat_j, mat_i);
+      	  // For mutational scenarios, we aggregate 1/4*A^2*(A+1)^2*4*2*A values. Therefore, to ignore a configuration with LL=X:
+      	  // X*A^3*(A+1)^2*2 < TOTAL/10000;
+      	  // logX < log(TOTAL) - log(10000*A^3*(A+1)^2*2) = log(TOTAL) - [log(10000) + 3log(A) + 2log(A+1) + log(2)];
+      	  double MIN_CONTRIBUTION   = 4 + 3*log10(num_alleles) + 2*log(num_alleles+1) + LOG_TWO;
+      	  double ll_no_mutation_max = -DBL_MAX/2, ll_no_mutation_total = 0.0;
+      	  double ll_one_denovo_max  = -DBL_MAX/2, ll_one_denovo_total  = 0.0;
+      	  if (options_.debug) PrintMessageDieOnError("Get GL indices...", M_PROGRESS);
+      	  int mother_gl_index       = unphased_gls->get_sample_index(family_iter->get_mother());
+      	  int father_gl_index       = unphased_gls->get_sample_index(family_iter->get_father());
+      	  int child_gl_index        = unphased_gls->get_sample_index(*child_iter);
+      	  // Iterate over all maternal genotypes
+      	  if (options_.debug) PrintMessageDieOnError("Compute likelihoods...", M_PROGRESS);
+      	  for (int mat_i = 0; mat_i < num_alleles; mat_i++){
+      	    for (int mat_j = 0; mat_j <= mat_i; mat_j++){
+      	      double mat_ll = dip_gt_priors->log_unphased_genotype_prior(mat_j, mat_i, family_iter->get_mother()) + unphased_gls->get_gl(mother_gl_index, mat_j, mat_i);
 
 	      // Iterate over all paternal genotypes
 	      for (int pat_i = 0; pat_i < num_alleles; pat_i++){
 		for (int pat_j = 0; pat_j <= pat_i; pat_j++){
+
+		  if (options_.chrX && (pat_i != pat_j)) { continue;} // ignore case of father heterozygous for chrX
+
 		  double pat_ll    = dip_gt_priors->log_unphased_genotype_prior(pat_j, pat_i, family_iter->get_father()) + unphased_gls->get_gl(father_gl_index, pat_j, pat_i);
 		  double config_ll = mat_ll + pat_ll + LOG_ONE_FOURTH;
 
 		  // Compute total LL for each scenario
 		  // Iterate over all 4 possible inheritance patterns for the child
-		  for (int mat_index = 0; mat_index < 2; ++mat_index){
+		  for (int mat_index = 0; mat_index < 2; ++mat_index) {
 		    int mat_allele = (mat_index == 0 ? mat_i : mat_j);
-		    for (int pat_index = 0; pat_index < 2; ++pat_index){
+		    for (int pat_index = 0; pat_index < 2; ++pat_index) {
 		      int pat_allele = (pat_index == 0 ? pat_i : pat_j);
 
-		      double no_mutation_config_ll = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mat_allele, pat_allele), std::max(mat_allele, pat_allele));
+		      double no_mutation_config_ll;
+		      if (options_.chrX && family_iter->get_child_sex(*child_iter)==SEX_MALE) {
+			no_mutation_config_ll = config_ll + unphased_gls->get_gl(child_gl_index, mat_allele, mat_allele); // homozygous for mom allele
+		      } else {
+			no_mutation_config_ll = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mat_allele, pat_allele), std::max(mat_allele, pat_allele));
+		      }
 		      update_streaming_log_sum_exp(no_mutation_config_ll, ll_no_mutation_max, ll_no_mutation_total);
 
 		      // All putative mutations to the maternal allele
 		      double max_ll_mat_mut = config_ll + unphased_gls->get_max_gl_allele_fixed(child_gl_index, pat_allele) +
 			mut_model.max_log_prior_mutation(str_variant.GetSizeFromLengthAllele(mat_allele));
-		      if (max_ll_mat_mut > ll_one_denovo_max-MIN_CONTRIBUTION){
-			for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++){
+		      if (max_ll_mat_mut > ll_one_denovo_max-MIN_CONTRIBUTION) {
+			for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++) {
 			  if (mut_allele == mat_allele)
 			    continue;
 			  double prob = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mut_allele, pat_allele),
@@ -346,17 +379,19 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 			}
 		      }
 
-		      // All putative mutations to the paternal allele
-		      double max_ll_pat_mut = config_ll + unphased_gls->get_max_gl_allele_fixed(child_gl_index, mat_allele) +
-			mut_model.max_log_prior_mutation(str_variant.GetSizeFromLengthAllele(pat_allele));
-		      if (max_ll_pat_mut > ll_one_denovo_max - MIN_CONTRIBUTION){
-			for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++){
-			  if (mut_allele == pat_allele)
-			    continue;
-			  double prob = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mat_allele, mut_allele), std::max(mat_allele, mut_allele))
-			    + mut_model.log_prior_mutation(str_variant.GetSizeFromLengthAllele(pat_allele),
-							   str_variant.GetSizeFromLengthAllele(mut_allele));
-			  update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
+		      // All putative mutations to the paternal allele - skip if male chrX
+		      if (!(options_.chrX && family_iter->get_child_sex(*child_iter)==SEX_MALE)) {
+			double max_ll_pat_mut = config_ll + unphased_gls->get_max_gl_allele_fixed(child_gl_index, mat_allele) +
+			  mut_model.max_log_prior_mutation(str_variant.GetSizeFromLengthAllele(pat_allele));
+			if (max_ll_pat_mut > ll_one_denovo_max - MIN_CONTRIBUTION){
+			  for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++){
+			    if (mut_allele == pat_allele)
+			      continue;
+			    double prob = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mat_allele, mut_allele), std::max(mat_allele, mut_allele))
+			      + mut_model.log_prior_mutation(str_variant.GetSizeFromLengthAllele(pat_allele),
+							     str_variant.GetSizeFromLengthAllele(mut_allele));
+			    update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
+			  }
 			}
 		      }
 		    }
@@ -369,8 +404,10 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 	  total_ll_one_denovo  = finish_streaming_log_sum_exp(ll_one_denovo_max,  ll_one_denovo_total);
 	}
 	// Add to results
-	DenovoResult dnr(family_iter->get_family_id(), family_iter->get_mother(), family_iter->get_father(), (*child_iter),
+	DenovoResult dnr(family_iter->get_family_id(),
+       family_iter->get_mother(), family_iter->get_father(), (*child_iter),
 			 family_iter->get_child_phenotype(*child_iter),
+       family_iter->get_child_sex(*child_iter),
 			 strvcf.get_sample_index(family_iter->get_mother()),
 			 strvcf.get_sample_index(family_iter->get_father()),
 			 strvcf.get_sample_index(*child_iter),
@@ -389,7 +426,6 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
     if (options_.debug) PrintMessageDieOnError("Destroy...", M_PROGRESS);
   }
 }
-
 
 void DenovoResult::GetRepcn(const VCF::Variant& variant, const int32_t& sample_ind,
 			    int* repcn_a, int* repcn_b) {
@@ -569,79 +605,107 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
   // *** Figure out new allele and POO *** //
   new_allele_ = 0;
   poocase_ = 0; // 1=Mendelian 2=new allele from father, 3=new allele from mother, 4=not in anyone
-  // Case 1: Mendelian
-  if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b) &&
-      (repcn_child_b == repcn_father_a || repcn_child_b == repcn_father_b)) {
-    poocase_ = 1;
-    new_allele_in_parents_ = true;
-    new_allele_ = 0;
-    mut_size_ = 0;
-    return;
-  }
-  if ((repcn_child_a == repcn_father_a || repcn_child_a == repcn_father_b) &&
-      (repcn_child_b == repcn_mother_a || repcn_child_b == repcn_mother_b)) {
-    poocase_ = 1;
-    new_allele_in_parents_ = true;
-    new_allele_ = 0;
-    mut_size_ = 0;
-    return;
-  }
-  // Case 2: new allele from father.
-  // Allele a in mother only, allele b not in father
-  if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b) &&
-      (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) &&
-      (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b)) {
-    new_allele_ = repcn_child_b;
-    poocase_ = 2;
-    mut_size_ = GetMutSize(new_allele_, repcn_father_a, repcn_father_b);
-  }
-  // Allele b in mother only, allele a not in father
-  if ((repcn_child_b == repcn_mother_a || repcn_child_b == repcn_mother_b) &&
-      (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) &&
-      (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b)) {
-    new_allele_ = repcn_child_a;
-    poocase_ = 2;
-    mut_size_ = GetMutSize(new_allele_, repcn_father_a, repcn_father_b);    
-  }
-  // Case 3: New allele from mother
-  // Allele a in father only, allele b not in mother
-  if ((repcn_child_a == repcn_father_a || repcn_child_a == repcn_father_b) &&
-      (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b) &&
-      (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b)) {
-    new_allele_ = repcn_child_b;
-    poocase_ = 3;
-    mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
-  }
-  // Allele b in father only, allele a not in mother
-  if ((repcn_child_b == repcn_father_a || repcn_child_b == repcn_father_b) &&
-      (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b) &&
-      (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b)) {
-    new_allele_ = repcn_child_a;
-    poocase_ = 3;
-    mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
-  }
-  // Case 4: new allele not in either parent at all and we haven't figured it out yet
-  if (poocase_ == 0 && repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b &&
-      repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) {
-    new_allele_ = repcn_child_a;
-    poocase_ = 4;
-    mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b);
-  }
-  if (poocase_ == 0 && repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b &&
-      repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) {
-    new_allele_ = repcn_child_b;
-    poocase_ = 4;
-    mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b);
-  }
-  if (repcn_child_a == new_allele_ && repcn_child_b == new_allele_ & options.filter_hom) {
-    *filter_mutation = true;
-    return;
-  }
-  if (new_allele_ == repcn_mother_a || new_allele_ == repcn_mother_b ||
-      new_allele_ == repcn_father_a || new_allele_ == repcn_father_b) {
-    new_allele_in_parents_ = true;
-  }
 
+  if (options.chrX && child_sex_ == SEX_MALE) {
+    // Case 1: Mendelian
+    if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b)) {
+      poocase_ = 1;
+      new_allele_in_parents_ = true;
+      new_allele_ = 0;
+      mut_size_ = 0;
+      return;
+    }
+    // Case 3: New allele from mother
+    // Allele a not in mother
+    if ((repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b)) {
+      new_allele_ = repcn_child_a;
+      poocase_ = 3;
+      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
+    }
+    // Case 4: new allele not in either parent at all and we haven't figured it out yet
+    if (poocase_ == 0 && repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b) {
+      new_allele_ = repcn_child_a;
+      poocase_ = 4;
+      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
+    }
+    if (new_allele_ == repcn_mother_a || new_allele_ == repcn_mother_b) {
+      new_allele_in_parents_ = true;
+    }
+  }
+  else {
+    // Case 1: Mendelian
+    if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b) &&
+        (repcn_child_b == repcn_father_a || repcn_child_b == repcn_father_b)) {
+      poocase_ = 1;
+      new_allele_in_parents_ = true;
+      new_allele_ = 0;
+      mut_size_ = 0;
+      return;
+    }
+    if ((repcn_child_a == repcn_father_a || repcn_child_a == repcn_father_b) &&
+        (repcn_child_b == repcn_mother_a || repcn_child_b == repcn_mother_b)) {
+      poocase_ = 1;
+      new_allele_in_parents_ = true;
+      new_allele_ = 0;
+      mut_size_ = 0;
+      return;
+    }
+    // Case 2: new allele from father.
+    // Allele a in mother only, allele b not in father
+    if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b) &&
+        (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) &&
+        (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b)) {
+      new_allele_ = repcn_child_b;
+      poocase_ = 2;
+      mut_size_ = GetMutSize(new_allele_, repcn_father_a, repcn_father_b);
+    }
+    // Allele b in mother only, allele a not in father
+    if ((repcn_child_b == repcn_mother_a || repcn_child_b == repcn_mother_b) &&
+        (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) &&
+        (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b)) {
+      new_allele_ = repcn_child_a;
+      poocase_ = 2;
+      mut_size_ = GetMutSize(new_allele_, repcn_father_a, repcn_father_b);
+    }
+    // Case 3: New allele from mother
+    // Allele a in father only, allele b not in mother
+    if ((repcn_child_a == repcn_father_a || repcn_child_a == repcn_father_b) &&
+        (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b) &&
+        (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b)) {
+      new_allele_ = repcn_child_b;
+      poocase_ = 3;
+      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
+    }
+    // Allele b in father only, allele a not in mother
+    if ((repcn_child_b == repcn_father_a || repcn_child_b == repcn_father_b) &&
+        (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b) &&
+        (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b)) {
+      new_allele_ = repcn_child_a;
+      poocase_ = 3;
+      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
+    }
+    // Case 4: new allele not in either parent at all and we haven't figured it out yet
+    if (poocase_ == 0 && repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b &&
+        repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) {
+      new_allele_ = repcn_child_a;
+      poocase_ = 4;
+      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b);
+    }
+    if (poocase_ == 0 && repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b &&
+        repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) {
+      new_allele_ = repcn_child_b;
+      poocase_ = 4;
+      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b);
+    }
+    if (repcn_child_a == new_allele_ && repcn_child_b == new_allele_ & options.filter_hom) {
+      *filter_mutation = true;
+      return;
+    }
+    if (new_allele_ == repcn_mother_a || new_allele_ == repcn_mother_b ||
+        new_allele_ == repcn_father_a || new_allele_ == repcn_father_b) {
+      new_allele_in_parents_ = true;
+    }
+  }
   // *** Get enclosing read info to set filter *** //
   // Extract enclreads and flnkreads
   std::vector<std::string> enclreads;
@@ -747,7 +811,7 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
 
   // *** Apply naive expansion detection - second looking at flanks *** //
   // First get max parent allele size either in flanks or enclosing
-  int max_parent_allele = std::max(std::max(GetMaxFlankAllele(enclreads[mother_ind_]), GetMaxFlankAllele(enclreads[father_ind_])), 
+  int max_parent_allele = std::max(std::max(GetMaxFlankAllele(enclreads[mother_ind_]), GetMaxFlankAllele(enclreads[father_ind_])),
 				   std::max(GetMaxFlankAllele(flnkreads[mother_ind_]), GetMaxFlankAllele(flnkreads[father_ind_])));
   // Then get num child flank reads > max parent allele size
   int num_large_child_flank = GetFlankLargerThan(flnkreads[child_ind_], max_parent_allele);
@@ -802,8 +866,7 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
   for (auto dnr_iter = dnr.begin(); dnr_iter != dnr.end(); dnr_iter++) {
     total_children++;
     bool filter_mutation = false;
-    dnr_iter->GetMutationInfo(options_, str_variant,
-			      &filter_mutation);
+    dnr_iter->GetMutationInfo(options_, str_variant, &filter_mutation);
     if (filter_mutation) {
       dnr_iter->zero_posterior();
     }
@@ -931,6 +994,7 @@ DenovoResult::DenovoResult(const std::string& family_id,
 			   const std::string& father_id,
 			   const std::string& child_id,
 			   const int& phenotype,
+         const int& child_sex,
 			   const int32_t mother_ind,
 			   const int32_t father_ind,
 			   const int32_t child_ind,
@@ -945,6 +1009,7 @@ DenovoResult::DenovoResult(const std::string& family_id,
   father_ind_ = father_ind;
   child_ind_ = child_ind;
   phenotype_ = phenotype;
+  child_sex_ = child_sex;
   total_ll_no_mutation_ = total_ll_no_mutation;
   total_ll_one_denovo_ = total_ll_one_denovo;
   log10_prior_mutation_ = log10prior;

@@ -37,16 +37,25 @@ enum PHENOTYPE {
   PT_MISSING = 0
 };
 
+enum SEX {
+  SEX_MALE = 1,
+  SEX_FEMALE = 2,
+  SEX_MISSING = 0
+};
+
 class NuclearFamily {
  public:
   NuclearFamily(const std::string& family_id,
 		const std::string& mother, const std::string& father,
 		const std::vector<std::string>& children,
-		const std::vector<int>& children_status);
+		const std::vector<int>& children_status,
+		const std::vector<int>& children_sex);
   virtual ~NuclearFamily();
 
   const int get_child_phenotype(const std::string& child_id);
+  const int get_child_sex(const std::string& child_id);
   const std::vector<int>& GetChildrenStatus() const {return children_status_;}
+  const std::vector<int>& GetChildrenSex() const {return children_sex_;}
   const std::string& get_family_id() const { return family_id_; }
   const std::string& get_mother()    const { return mother_; }
   const std::string& get_father()    const { return father_; }
@@ -59,6 +68,7 @@ class NuclearFamily {
   std::string mother_, father_;
   std::vector<std::string> children_;  
   std::vector<int> children_status_;
+  std::vector<int> children_sex_;
 };
 
 class PedigreeSet {
@@ -90,10 +100,11 @@ class PedigreeNode {
   std::vector<PedigreeNode*> children_;
   std::string family_id_;
   int status_;
+  int sex_;
 
  public:
-  PedigreeNode(const std::string& name, const std::string& family_id, const int& status)
-    : name_(name), family_id_(family_id), status_(status) {
+ PedigreeNode(const std::string& name, const std::string& family_id, const int& status, const int& sex)
+   : name_(name), family_id_(family_id), status_(status), sex_(sex) {
     mother_ = NULL;
     father_ = NULL;
   }
@@ -108,6 +119,7 @@ class PedigreeNode {
   PedigreeNode* get_father()        const { return father_;          }
   const std::string& get_name()     const { return name_;            }
   const int& get_status()           const { return status_;          }
+  const int& get_sex()              const { return sex_;             }
   const std::string& get_family()   const { return family_id_;       }
   std::vector<PedigreeNode*>& get_children() { return children_;     }
 
