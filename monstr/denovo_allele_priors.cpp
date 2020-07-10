@@ -21,7 +21,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <vector>
 
-#include "src/denovo_allele_priors.h"
+#include "denovo_allele_priors.h"
 
 void PopulationGenotypePrior::compute_allele_freqs(VCF::Variant& variant, std::vector<NuclearFamily>& families){
   allele_freqs_ = std::vector<double>(num_alleles_, 1.0); // Use a one sample pseudocount

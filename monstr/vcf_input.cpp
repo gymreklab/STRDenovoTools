@@ -22,9 +22,9 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <cfloat>
 #include <math.h>
 
-#include "src/mathops.h"
-#include "src/region.h"
-#include "src/vcf_input.h"
+#include "mathops.h"
+#include "region.h"
+#include "vcf_input.h"
 
 const std::string GT_KEY          = "GT";
 const std::string UNPHASED_GL_KEY = "GL";

@@ -22,8 +22,8 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <string>
 
-#include "src/pedigree.h"
-#include "src/vcf_reader.h"
+#include "pedigree.h"
+#include "vcf_reader.h"
 
 using namespace std;
 

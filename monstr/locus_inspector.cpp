@@ -19,8 +19,8 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <sstream>
 
-#include "src/common.h"
-#include "src/locus_inspector.h"
+#include "common.h"
+#include "locus_inspector.h"
 
 LocusInspector::LocusInspector() {}
 

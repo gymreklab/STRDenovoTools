@@ -20,8 +20,8 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <fstream>
 #include <sstream>
 
-#include "src/common.h"
-#include "src/mutation_priors.h"
+#include "common.h"
+#include "mutation_priors.h"
 
 MutationPriors::MutationPriors(const double& _default_prior,
 			       const double& _default_beta,

@@ -29,7 +29,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <vector>
 
-#include "src/common.h"
+#include "common.h"
 
 enum PHENOTYPE {
   PT_CONTROL = 1,

@@ -23,7 +23,8 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <iostream>
 #include <sstream>
 
-#include "src/common.h"
+#include "common.h"
+#include "MonSTRConfig.h"
 
 using namespace std;
 
@@ -46,8 +47,8 @@ void PrintMessageDieOnError(const string& msg, MSGTYPE msgtype) {
     errx(1, "Invalid message type. This should never happen");
   }
   stringstream ss;
-  ss  << "[STRDenovoTools"
-      << "-" << _GIT_VERSION << "] " << typestring << msg << endl;
+  ss << "[MonSTR-" << MonSTR_VERSION_MAJOR << "." << MonSTR_VERSION_MINOR << "] "
+     << typestring << msg << endl;
   cerr << ss.str();
 
   if (msgtype == M_ERROR) {

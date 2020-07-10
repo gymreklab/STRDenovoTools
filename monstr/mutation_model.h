@@ -22,9 +22,9 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <math.h>
 
-#include "src/mutation_priors.h"
-#include "src/options.h"
-#include "src/vcf_reader.h"
+#include "mutation_priors.h"
+#include "options.h"
+#include "vcf_reader.h"
 
 class MutationModel {
 public:
