@@ -31,12 +31,15 @@ WORKDIR ..
 
 
 # Download, compile, and install CookieMonSTR
+RUN apt-get update && apt-get install -qqy cmake
 RUN git clone https://github.com/gymreklab/STRDenovoTools
 WORKDIR STRDenovoTools
-RUN ./reconf
-RUN ./configure
+RUN mkdir build
+WORKDIR build
+RUN cmake ..
 RUN make
 RUN make install
+WORKDIR ..
 WORKDIR ..
 
 # Download, compile, and install Datamash

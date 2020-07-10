@@ -27,7 +27,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include <stdlib.h>
 
-#include "src/region.h"
+#include "region.h"
 
 void readRegions(const std::string& input_file, uint32_t max_regions, const std::string& chrom_limit, std::vector<Region>& regions, std::ostream& logger){
   logger << "Reading region file " << input_file << std::endl;

@@ -21,9 +21,9 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <assert.h>
 #include <math.h>
 
-#include "src/mathops.h"
+#include "mathops.h"
 
-#include "src/fastonebigheader.h"
+#include "fastonebigheader.h"
 
 const double LOG_ONE_HALF  = log(0.5);
 const double TOLERANCE     = 1e-10;

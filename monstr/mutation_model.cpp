@@ -21,7 +21,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "math.h"
 
-#include "src/mutation_model.h"
+#include "mutation_model.h"
 
 MutationModel::MutationModel(const VCF::Variant& str_variant,
 			     MutationPriors& priors,

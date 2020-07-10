@@ -29,13 +29,14 @@ using namespace std;
 #include <set>
 #include <sstream>
 
-#include "src/common.h"
-#include "src/denovo_scanner.h"
-#include "src/locus_inspector.h"
-#include "src/options.h"
-#include "src/pedigree.h"
-#include "src/vcf_reader.h"
-
+#include "monstr/common.h"
+#include "monstr/denovo_scanner.h"
+#include "monstr/locus_inspector.h"
+#include "monstr/options.h"
+#include "monstr/pedigree.h"
+#include "monstr/vcf_reader.h"
+#include "MonSTRConfig.h"
+                           
 bool file_exists(const std::string& path){
   return (access(path.c_str(), F_OK) != -1);
 }
@@ -101,7 +102,8 @@ void parse_commandline_options(int argc, char* argv[], Options* options) {
       options->verbose++;
       break;
     case OPT_VERSION:
-      cerr << _GIT_VERSION << endl;
+      cout << argv[0] << " Version " << MonSTR_VERSION_MAJOR << "."
+	   << MonSTR_VERSION_MINOR << endl;
       exit(0);
     case '?':
       show_help();

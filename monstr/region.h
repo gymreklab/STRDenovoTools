@@ -30,7 +30,7 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include <stdlib.h>
 
-#include "src/common.h"
+#include "common.h"
 
 class Region{
  private:

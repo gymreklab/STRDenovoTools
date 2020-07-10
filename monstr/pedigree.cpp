@@ -17,8 +17,8 @@ You should have received a copy of the GNU General Public License
 along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "src/common.h"
-#include "src/pedigree.h"
+#include "common.h"
+#include "pedigree.h"
 
 #include <fstream>
 #include <iostream>

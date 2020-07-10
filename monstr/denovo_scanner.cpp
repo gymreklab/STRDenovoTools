@@ -23,12 +23,12 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <sstream>
 #include <vector>
 
-#include "src/denovo_allele_priors.h"
-#include "src/denovo_scanner.h"
-#include "src/locus_inspector.h"
-#include "src/mathops.h"
-#include "src/mutation_model.h"
-#include "src/vcf_input.h"
+#include "denovo_allele_priors.h"
+#include "denovo_scanner.h"
+#include "locus_inspector.h"
+#include "mathops.h"
+#include "mutation_model.h"
+#include "vcf_input.h"
 
 #include "htslib/kfunc.h"
 

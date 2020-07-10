@@ -1,3 +1,4 @@
+build/
 test.*
 nohup.out
 src/ExamineDenovo

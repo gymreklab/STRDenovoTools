@@ -26,9 +26,9 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include <string>
 
-#include "src/common.h"
-#include "src/pedigree.h"
-#include "src/vcf_reader.h"
+#include "common.h"
+#include "pedigree.h"
+#include "vcf_reader.h"
 
 class DiploidGenotypePrior {
  protected:

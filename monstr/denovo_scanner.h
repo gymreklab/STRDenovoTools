@@ -27,10 +27,10 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include <string>
 
-#include "src/mutation_priors.h"
-#include "src/options.h"
-#include "src/pedigree.h"
-#include "src/vcf_reader.h"
+#include "mutation_priors.h"
+#include "options.h"
+#include "pedigree.h"
+#include "vcf_reader.h"
 
 using namespace std;
 

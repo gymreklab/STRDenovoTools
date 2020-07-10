@@ -26,9 +26,9 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <vector>
 
-#include "src/options.h"
-#include "src/region.h"
-#include "src/vcf_reader.h"
+#include "options.h"
+#include "region.h"
+#include "vcf_reader.h"
 
 extern const std::string GENOTYPE_KEY;
 extern const std::string UNPHASED_GL_KEY;
