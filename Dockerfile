@@ -1,12 +1,21 @@
 FROM ileena/strtools:latest
 
 # Get necessary packages
+RUN apt-get update
+
 RUN apt-get install -qqy \
   autotools-dev \
   automake \
   libtool libtool-bin \
   libgsl-dev
 
+
+#install latest cmake (needed for STRDenovoTools)
+ADD https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.sh /cmake-3.7.2-Linux-x86_64.sh
+RUN mkdir /opt/cmake
+RUN sh /cmake-3.7.2-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
+RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
+RUN cmake --version
 
 # Install packages
 RUN pip3 install pycrypto
@@ -32,7 +41,7 @@ WORKDIR ..
 
 # Download, compile, and install CookieMonSTR
 RUN apt-get update && apt-get install -qqy cmake
-RUN git clone https://github.com/gymreklab/STRDenovoTools
+RUN git clone https://github.com/ileenamitra/STRDenovoTools
 WORKDIR STRDenovoTools
 RUN mkdir build
 WORKDIR build
@@ -41,6 +50,7 @@ RUN make
 RUN make install
 WORKDIR ..
 WORKDIR ..
+
 
 # Download, compile, and install Datamash
 RUN wget http://ftp.gnu.org/gnu/datamash/datamash-1.3.tar.gz
