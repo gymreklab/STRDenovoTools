@@ -43,7 +43,7 @@ WORKDIR ..
 
 # Download, compile, and install CookieMonSTR
 RUN apt-get update && apt-get install -qqy cmake
-RUN git clone https://github.com/ileenamitra/STRDenovoTools
+RUN git clone https://github.com/gymreklab/STRDenovoTools
 WORKDIR STRDenovoTools
 RUN mkdir build
 WORKDIR build
