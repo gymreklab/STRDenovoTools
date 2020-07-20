@@ -50,17 +50,17 @@ add_subdirectory(monstr)
 
 # add the executable
 add_executable(MonSTR src/main_sdt.cpp)
-add_executable(MonSTRExamine src/main_examine.cpp)
+# add_executable(MonSTRExamine src/main_examine.cpp)
 
 target_compile_features(MonSTR PRIVATE cxx_range_for)
 target_include_directories(MonSTR PUBLIC "${PROJECT_BINARY_DIR}")
 target_link_libraries(MonSTR monstr pthread)
 install(TARGETS MonSTR DESTINATION bin)
 
-target_compile_features(MonSTRExamine PRIVATE cxx_range_for)
-target_include_directories(MonSTRExamine PUBLIC "${PROJECT_BINARY_DIR}")
-target_link_libraries(MonSTRExamine monstr pthread)
-install(TARGETS MonSTRExamine DESTINATION bin)
+# target_compile_features(MonSTRExamine PRIVATE cxx_range_for)
+# target_include_directories(MonSTRExamine PUBLIC "${PROJECT_BINARY_DIR}")
+# target_link_libraries(MonSTRExamine monstr pthread)
+# install(TARGETS MonSTRExamine DESTINATION bin)
 
 add_dependencies(htslib zlib)
 add_dependencies(monstr htslib)
