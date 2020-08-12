@@ -371,10 +371,17 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 			for (int mut_allele = 0; mut_allele < num_alleles; mut_allele++) {
 			  if (mut_allele == mat_allele)
 			    continue;
-			  double prob = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mut_allele, pat_allele),
-									 std::max(mut_allele, pat_allele))
-			    + mut_model.log_prior_mutation(str_variant.GetSizeFromLengthAllele(mat_allele),
-							   str_variant.GetSizeFromLengthAllele(mut_allele));
+			  double prob;
+			  if (!(options_.chrX && family_iter->get_child_sex(*child_iter)==SEX_MALE)) {
+			    prob = config_ll + unphased_gls->get_gl(child_gl_index, std::min(mut_allele, pat_allele),
+									   std::max(mut_allele, pat_allele))
+			      + mut_model.log_prior_mutation(str_variant.GetSizeFromLengthAllele(mat_allele),
+							     str_variant.GetSizeFromLengthAllele(mut_allele));
+			  } else {
+			    prob = config_ll + unphased_gls->get_gl(child_gl_index, mut_allele, mut_allele)
+			      + mut_model.log_prior_mutation(str_variant.GetSizeFromLengthAllele(mat_allele),
+							     str_variant.GetSizeFromLengthAllele(mut_allele));
+			  }
 			  update_streaming_log_sum_exp(prob, ll_one_denovo_max, ll_one_denovo_total);
 			}
 		      }
