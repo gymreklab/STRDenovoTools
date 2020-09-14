@@ -46,7 +46,7 @@ set(htslib_static ${CMAKE_BINARY_DIR}/thirdparty/htslib/lib/libhts.a)
 include_directories(${CMAKE_BINARY_DIR}/thirdparty/htslib/include)
 add_dependencies(htslib zlib)
 
-add_subdirectory(monstr)
+add_subdirectory(lib)
 
 # add the executable
 add_executable(MonSTR src/main_sdt.cpp)
@@ -54,7 +54,7 @@ add_executable(MonSTR src/main_sdt.cpp)
 
 target_compile_features(MonSTR PRIVATE cxx_range_for)
 target_include_directories(MonSTR PUBLIC "${PROJECT_BINARY_DIR}")
-target_link_libraries(MonSTR monstr pthread)
+target_link_libraries(MonSTR lib pthread)
 install(TARGETS MonSTR DESTINATION bin)
 
 # target_compile_features(MonSTRExamine PRIVATE cxx_range_for)
@@ -63,4 +63,4 @@ install(TARGETS MonSTR DESTINATION bin)
 # install(TARGETS MonSTRExamine DESTINATION bin)
 
 add_dependencies(htslib zlib)
-add_dependencies(monstr htslib)
+add_dependencies(lib htslib)

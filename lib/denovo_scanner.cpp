@@ -704,7 +704,7 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
       poocase_ = 4;
       mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b);
     }
-    if (repcn_child_a == new_allele_ && repcn_child_b == new_allele_ & options.filter_hom) {
+    if ((repcn_child_a == new_allele_) && (repcn_child_b == new_allele_) & options.filter_hom) {
       *filter_mutation = true;
       return;
     }
