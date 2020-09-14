@@ -67,6 +67,8 @@ MonSTR outputs the following files (`<OUTPREFIX>` is specified by the `--out` op
 
 This file contains one line per TR per trio. It contains the following columns:
 
+| Column header | Description |
+|-----------|------------|
 | **chrom** | The chromosome of the TR|
 | **pos** | The postion of the TR |
 | **period** | The length of the repeat unit (in bp) |
@@ -98,6 +100,8 @@ This file contains one line per TR per trio. It contains the following columns:
 
 This file contains a single line per TR. It contains the following columns:
 
+| Column header | Description |
+|-----------|------------|
 | **chrom** | The chromosome of the TR|
 | **pos** | The postion of the TR |
 | **period** | The length of the repeat unit (in bp) |
