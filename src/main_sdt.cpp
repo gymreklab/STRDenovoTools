@@ -17,7 +17,7 @@ You should have received a copy of the GNU General Public License
 along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using namespace std;
+//using namespace std;
 
 #include <getopt.h>
 #include <stdlib.h>
@@ -29,12 +29,12 @@ using namespace std;
 #include <set>
 #include <sstream>
 
-#include "monstr/common.h"
-#include "monstr/denovo_scanner.h"
-#include "monstr/mutation_priors.h"
-#include "monstr/options.h"
-#include "monstr/pedigree.h"
-#include "monstr/vcf_reader.h"
+#include "lib/common.h"
+#include "lib/denovo_scanner.h"
+#include "lib/mutation_priors.h"
+#include "lib/options.h"
+#include "lib/pedigree.h"
+#include "lib/vcf_reader.h"
 #include "MonSTRConfig.h"
 
 bool file_exists(const std::string& path){
