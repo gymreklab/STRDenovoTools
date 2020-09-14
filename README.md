@@ -67,17 +67,27 @@ By default, MonSTR computes a joint likelihood of all possible genotype configur
 
 The sample IDs in the VCF output file must match those in the .fam file and should not be repeated across families.
 
+Note, GangSTR only estimates the number of repeat units. It will not output sequence differences, or differences from the reference allele consisting of a non-integer number of repeats. HipSTR can detect sequence differences, or non-integer changes in repeat copy number. To collapse alleles or the same length, or round alleles to the nearest repeat copy number, use the following options:
+
+* `--combine-alleles-by-length`: Collapse alleles of the same length to one.
+* `--round-alleles`: Round allele lengths to nearest repeat unit.
+
 <a name="filtering"></a>
 ## Filtering options
 
-MonSTR provides the following options for filtering calls or families:
+MonSTR provides the following filtering options:
 
 General filters:
 
 * `--min-coverage <INT>`: Discard calls with less than this much coverage, based on the VCF FORMAT:DP field. Default: 0.
 * `--min-score <FLOAT>`: Discard calls with less than this score, based on the VCF FORMAT:Q field. Default: 0.
 * `--filter-hom`: Filter calls where the child is homozygous for new allele.
-* `--require-all-chilrewn`: Discard loci in family where not all children have calls. For example, if processing a quad family, but only one child has a call, discard the locus.
+* `--require-all-chilren`: Discard loci in family where not all children have calls. For example, if processing a quad family, but only one child has a call, discard the locus.
+* `--family <STR>`: Restrict to analyzing this family (based on the family ID in the .fam file).
+* `--require-num-children <INT>`: Require family to have this many children. Default: 0.
+* `--region <STR>`: Restrict to loci in this region (chrom:start-end).
+* `--period <INT>`: Restrict to loci with this repeat unit length.
+* `--max-num-alleles <INT>`: Filter loci with more than this many alleles. Default: 25.
 
 HipSTR-specific filters:
 
@@ -97,12 +107,48 @@ MonSTR will only process a trio of all samples (mother, family, and child) pass 
 <a name="models"></a>
 ## Specifying custom mutation models
 
-TODO - naive, mutaiton models, chrx
+By default, MonSTR uses a statistical model to compute a posterior probabilty of mutation at each TR in each child ("Model-based calling" below). You may also use a naive method ("Naive calling") to identify mutations.
+
+#### Model-based calling
+
+TODO describe default values vs. uniform vs. per-locus models, defaults, when each of these gets used
+
+* `--default-prior <FLOAT>`
+* `--default-beta <FLOAT>`
+* `--default-geomp <FLOAT>`
+* `--default-central <INT>`
+* `--mutation-models <STR>`
+
+TODO genotype priors, what happens by default
+
+* `--use-pop-priors`
+
+
+#### Naive calling
+
+
+* `--naive`: Use naive mutation calling based on hard calls. Simply check if calls follow Mendelian inheritance.
+* `--naive-expansions-frr <int1,int2>`: Use naive method to detect expansions. Look for <int1> FRRs in child and none in parent. If not look for <int2> flanks in child greater than largest parent allele. Only works with GangSTR input.
+
+TODO defaults for these, which VCF fields based on. What posterior gets set to.
+
+#### Chromosome X
+
+If analyzing mutations on the X chromosome, specify the `--chrX` option. This assumes the entire VCF is for chromosome X. Sex information must be available for children. You can use either model-based or naive mutation calling on chromosome X. 
+
+If using `--chrX`, it is recommended that males have haploid calls. If you are using GangSTR, you can use `--bam-samps` and `--samp-sex` to perform sex-aware calling of sex chromosomes.
+
 
 <a name="output"></a>
 ## Output formats
 
 MonSTR outputs files `<OUTPREFIX>.all_mutations.tab` and `<OUTPREFIX>.locus_summary.tab` (`<OUTPREFIX>` is specified by the `--out` option). The columns in these files are described below.
+
+The following options also control which loci/mutations are output:
+
+* `--posterior-threshold <FLOAT>`: Posterior probability threshold to call a mutation. Default: 0.9.
+* `--include-invariant`: Output info for loci even if there are no alternate alleles present. By default, invariant loci are excluded.
+* `--output-all-loci`: Output all calls to the all_mutations output file, regardless of posterior score. This can be useful if you want to analyze properties as a function of posterior threshold, or want to decide later on an appropriate posterior threshold.
 
 #### `<OUTPREFIX>.all_mutations.tab`    
 
@@ -117,7 +163,7 @@ This file contains one line per TR per trio. It contains the following columns:
 | **family** | The family ID of the trio (taken from the .fam file)
 | **child** | The sample ID of the child in the trio |
 | **phenotype** | The phenotype of the child, taken from the .fam file |
-| **posterior** | The posterior probability of mutation |
+| **posterior** | The posterior probability of mutation in this child at this TR locus.|
 | **newallele** | The allele arising from a de novo mutation (number of repeat units). This field is only meaningful if there was a mutation inferred. |
 | **mutsize** | The size of the mutation (number of repeat units). This field is only meaningful if there was a mutation inferred. |
 | **inparents** | Set to 1 if the new allele is found in the parents, else 0. This field is only meaningful if there was a mutation inferred.
