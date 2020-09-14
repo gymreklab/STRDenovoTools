@@ -1,4 +1,7 @@
-# MonSTR: identifying de novo tandem repeat mutations from next-generation sequencing data
+# MonSTR
+
+
+MonSTR is a toolkit for identifying and analyzing de novo tandem repeat mutations. The core code for calling de novos and parsing VCF files is modified from that originally written by Thomas Willems in the [HipSTR](https://github.com/tfwillems/HipSTR) repository.
 
 Authors:
 
@@ -7,7 +10,6 @@ Authors:
 
 License: MIT
 
-MonSTR is a toolkit for identifying and analyzing de novo tandem repeat mutations. The core code for calling de novos and parsing VCF files is modified from that originally written by Thomas Willems in the [HipSTR](https://github.com/tfwillems/HipSTR) repository.
 
 ## Install
 
@@ -23,7 +25,7 @@ make
 sudo make install
 ```
 
-You will need to have a C-compiler and cmake installed.
+You will need to have a C-compiler and cmake installed. Type `MonSTR --help` to check that MonSTR installed successfully.
 
 ## Basic usage
 
@@ -75,14 +77,50 @@ This file contains one line per TR per trio. It contains the following columns:
 | **posterior** | The posterior probability of mutation |
 | **newallele** | The allele arising from a de novo mutation (number of repeat units). This field is only meaningful if there was a mutation inferred. |
 | **mutsize** | The size of the mutation (number of repeat units). This field is only meaningful if there was a mutation inferred. |
-| **inparents** | Set to true if the new allele is found in the parents. This field is only meaningful if there was a mutation inferred.
+| **inparents** | Set to 1 if the new allele is found in the parents, else 0. This field is only meaningful if there was a mutation inferred.
 | **poocase** | Gives the inferred parent of origin of the mutation, if a mutation was inferred. 0: unknown; 1: Mendelian (no denovo); 2: New allele from father; 3: New allele from mother; 4: Unclear |
-
+| **isnew** | Set to 1 if the new alleles is not found in any control samples in the input VCF. Otherwise set to 0. This field is only meaningful if there was a mutation inferred. |
+| **case_count** | Count of the new allele in cases (phenotype=2). This field is only meaningful if there was a mutation inferred. |
+| **ctrl_count** | Count of the new allele in controls (phenotype=1). This field is only meaningful if there was a mutation inferred. |
+| **unk_count** | Count of the new allele in samples with unknown phenotype (phenotype=0). This field is only meaningful if there was a mutation inferred. |
+| **child_gt** | Genotype of the child sample. |
+| **mat_gt** | Genotype of the mother.|
+| **pat_gt** | Genotype of the father.|
+| **encl_child** | Number of enclosing reads of the new allele in the child. This field is only meaningful if there was a mutation inferred. |
+| **encl_mother** | Number of enclosing reads of the new allele in the mother. This field is only meaningful if there was a mutation inferred. |
+| **encl_father** | Number of enclosing reads of the new allele in the father. This field is only meaningful if there was a mutation inferred. |
+| **encl_parent** | Number of encloseing reads of the new allele in the parent the mutation came from (see poocase). |
+| **long_mother** | Indicates whether the longer vs. shorter allele was transmitted from the mother. This is only relevant if the mother is heterozygous. 0=unknown; 1=shorter; 2=longer. |
+| **long_father** | Indicates whether the longer vs. shorter allele was transmitted from the father. This is only relevant if the father is heterozygous. 0=unknown; 1=shorter; 2=longer.  |
 
 
 #### `<OUTPREFIX>.locus_summary.tab`    
 
-TODO
+This file contains a single line per TR. It contains the following columns:
+
+| **chrom** | The chromosome of the TR|
+| **pos** | The postion of the TR |
+| **period** | The length of the repeat unit (in bp) |
+| **ref_allele_size** | The number of repeats in the reference genome |
+| **num_alleles_bylength** | The number of possible alleles at the locus, collapsing all alleles with the same length.|
+| **num_alleles_byseq** | The number of possible alleles at the locus. For GangSTR, this will always be the same as num_alleles_by_length since it only considers length differences.|
+| **het_by_seq** | Heterozygosity of the locus |
+| **total_children** | The total number of children (trios) analyzed at the locus. |
+| **total_mutations** | The total number of mutations called at the locus. |
+| **total_mutation_rate** | The estimated mutation rate at the locus, based on the number of observed mutations and transmissions.|
+| **affected_children** | The total number of affected children (trios) analyzed at the locus. |
+| **affected_mutations** | The total number of mutations called at the locus in affected samples. |
+| **affected_new_mutations** | The total number of mutations called at the locus in affected samples resulting in alleles unobserved in the rest of the cohort. |
+| **affected_mutation_rate** | The estimated mutation rate at the locus, based on the number of observed mutations and transmissions and considering only affected samples.|
+| **unaffected_children** | The total number of unaffected children (trios) analyzed at the locus. |
+| **unaffected_mutations** | The total number of mutations called at the locus in unaffected samples. |
+| **unaffected_new_mutations** | The total number of mutations called at the locus in unaffected samples resulting in alleles unobserved in the rest of the cohort. |
+| **unaffected_mutation_rate** | The estimated mutation rate at the locus, based on the number of observed mutations and transmissions and considering only unaffected samples.|
+| **p-value** | P-value based on a Fisher's exact test testing if mutations are enriched in affecteds vs. unaffecteds.|
+| **children_with_mutations** | Comma-separated list of children with mutations. Format of each child is famid:phenotype:newallele:controlcount,casecount,unknowncount.|
+| **aff_tdt** | Keep track of how often the long vs. short allele were transmitted from mother and father in affected children. Format is: counts for 0=unknown/1=short/2=long mother:father. This summarizes counts from `long_mother` and `long_father` in the all mutations file.|
+| **unaff_tdt** | Keep track of how often the long vs. short allele were transmitted from mother and father in unaffected children. Format is: counts for 0=unknown/1=short/2=long mother:father. This summarizes counts from `long_mother` and `long_father` in the all mutations file.|
+
 
 ## Cite 
 If you use this method for your research, please cite:
