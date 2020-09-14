@@ -38,8 +38,11 @@ Below shows a basic MonSTR command:
 MonSTR \
     --strvcf test.vcf.gz \
     --fam family.fam \
+    [--gangstr] \
     --out test
 ```
+
+By default, a HipSTR VCF is expected. If using a GangSTR VCF, use the option `--gangstr`.
 
 Type `MonSTR --help`, or the documentation below, to see more detailed information about which options are available.
 
@@ -55,13 +58,37 @@ The sample IDs in the VCF output file must match those in the .fam file and shou
 
 ## Filtering options
 
+MonSTR provides the following options for filtering calls or families:
+
+General filters:
+
+* `--min-coverage <INT>`: Discard calls with less than this much coverage, based on the VCF FORMAT:DP field. Default: 0.
+* `--min-score <FLOAT>`: Discard calls with less than this score, based on the VCF FORMAT:Q field. Default: 0.
+* `--filter-hom`: Filter calls where the child is homozygous for new allele.
+* `--require-all-chilrewn`: Discard loci in family where not all children have calls. For example, if processing a quad family, but only one child has a call, discard the locus.
+
+HipSTR-specific filters:
+
+* `--min-span-coverage <INT>`: Discard calls with less than this many spanning reads, based on the VCF FORMAT:MALLREADS field. Default: 0.
+* `--min-supp-reads <INT>`: Discard calls with an allele supported by less than this many reads, based on the VCF FORMAT:MALLREADS field. Default: 0.
+
+GangSTR-specific filters:
+* `--min-num-encl-child <INT>`: Require this many enclosing reads supporting de novo allele. Based on the VCF FORMAT:ENCLREADS field. Default: 0.
+* `--max-num-encl-parent <INT>`: Discard if more than this many enclosing reads support the de novo allele in parent. Based on the VCF FORMAT:ENCLREADS field. Default: 1000.
+* `--max-perc-encl-parent <FLOAT>`: Discard if more than this percentage enclosing reads support de novo allele in parent. Based on the VCF FORMAT:ENCLREADS field. Default: 1.0.
+* `--min-encl-match <FLOAT>`: Discard if fewer than this percentage of enclosing reads match the call. Based on the VCF FORMAT:ENCLREADS and FORMAT:REPCN fields. Default: 0.0.
+* `--min-total-encl <INT>`: Require this many total enclosing reads in each sample. Based on the VCF FORMAT:ENCLREADS field. Default: 0.
+
+
+MonSTR will only process a trio of all samples (mother, family, and child) pass all specified filters.
+
 ## Specifying custom mutation models
 
 ## Running on chromosmoe X
 
 ## Output formats
 
-MonSTR outputs the following files (`<OUTPREFIX>` is specified by the `--out` option):
+MonSTR outputs files `<OUTPREFIX>.all_mutations.tab` and `<OUTPREFIX>.locus_summary.tab` (`<OUTPREFIX>` is specified by the `--out` option). The columns in these files are described below.
 
 #### `<OUTPREFIX>.all_mutations.tab`    
 
