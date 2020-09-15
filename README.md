@@ -118,8 +118,8 @@ MonSTR computes a a joint likelihood across parent and child genotypes for all p
 
 * Transition probabilities, which give the probability of mutating from one allele size to another. Here allele size always refers to the number of repeat units. If using GangSTR, or HipSTR sequence-based alleles, MonSTR will assume a uniform probability to mutate from one allele to each other possible alleles. If using HipSTR with the `--combine-alleles-by-length` option, you can additionally specify more complex transition parameters, based on mutation parameters described in [Gymrek, et al. 2017](https://www.nature.com/articles/ng.3952).
 
-  ** GeomP describes the parameter for the geometric step size distribution. If this is equal to 1, all steps are a single unit. If it is less than 1, larger step sizes are allowed. `--default-geomp <FLOAT>` can be used to set a global GeomP value (default: 1.0).
-  ** Beta describes a length dependent directionality bias. If Beta=0, then there is no bias. If Beta > 0, long alleles (relative to a "central" allele) tend to contract and short alleles tend to expand. `--default-beta <FLOAT>` and `--default-central <INT>` can be used to specify a global Beta and central allele value. (defaults Beta=0.0, central allele=0). The central allele is given in terms of the number of repeats relative to the reference genome.
+  * GeomP describes the parameter for the geometric step size distribution. If this is equal to 1, all steps are a single unit. If it is less than 1, larger step sizes are allowed. `--default-geomp <FLOAT>` can be used to set a global GeomP value (default: 1.0).
+  * Beta describes a length dependent directionality bias. If Beta=0, then there is no bias. If Beta > 0, long alleles (relative to a "central" allele) tend to contract and short alleles tend to expand. `--default-beta <FLOAT>` and `--default-central <INT>` can be used to specify a global Beta and central allele value. (defaults Beta=0.0, central allele=0). The central allele is given in terms of the number of repeats relative to the reference genome.
 
 Alternatively you can set per-locus parameters as described below.
 
