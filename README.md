@@ -126,11 +126,11 @@ TODO genotype priors, what happens by default
 
 #### Naive calling
 
+In addition to model-based mutation calling, MonSTR implements a naive mutation detection algorithm.
 
-* `--naive`: Use naive mutation calling based on hard calls. Simply check if calls follow Mendelian inheritance.
-* `--naive-expansions-frr <int1,int2>`: Use naive method to detect expansions. Look for <int1> FRRs in child and none in parent. If not look for <int2> flanks in child greater than largest parent allele. Only works with GangSTR input.
+* Specify the `--naive` option to simply check if calls follow Mendelian inheritance. In this case the posterior probabilities for mutations are always set to 1, else 0 for no mutation.
 
-TODO defaults for these, which VCF fields based on. What posterior gets set to.
+* Specify the option `--naive-expansions-frr <int1,int2>` to implement a naive calling method to identify candidate expansions. This looks for `<int1>` FRR (fully repetitive reads) in the child and 0 in the parent. If there are no FRR reads present, look for loci with at least `<int2>` flanking reads in the child greater than the largest parent allele. This only works with GangSTR input. To see a full description of FRR and flanking reads, see the [GangSTR documentation](https://github.com/gymreklab/gangstr) and publication. This option uses information from the VCF FORMAT:FLNKREADS and FORMAT:RC fields. Posteriors for candidate expansions are set to -1.
 
 #### Chromosome X
 
@@ -163,7 +163,7 @@ This file contains one line per TR per trio. It contains the following columns:
 | **family** | The family ID of the trio (taken from the .fam file)
 | **child** | The sample ID of the child in the trio |
 | **phenotype** | The phenotype of the child, taken from the .fam file |
-| **posterior** | The posterior probability of mutation in this child at this TR locus.|
+| **posterior** | The posterior probability of mutation in this child at this TR locus. If using naive calling, this is always set to 1 for mutations, else 0. If using naive expansion detection, this is set to -1 for candidate expansions. |
 | **newallele** | The allele arising from a de novo mutation (number of repeat units). This field is only meaningful if there was a mutation inferred. |
 | **mutsize** | The size of the mutation (number of repeat units). This field is only meaningful if there was a mutation inferred. |
 | **inparents** | Set to 1 if the new allele is found in the parents, else 0. This field is only meaningful if there was a mutation inferred.
@@ -215,7 +215,9 @@ This file contains a single line per TR. It contains the following columns:
 <a name="scripts"></a>
 ## Additional scripts
 
-TODO
+See `scripts/` for additional scripts:
+
+* `qc_denovos.py` is a script for further filtering the output of  `<OUTPREFIX>.all_mutations.tab`, for example to remove loci, families or children with an outlier number of total mutations. Type `python3 scripts/qc_denovos.py` to see full usage information.
 
 <a name="cite"></a>
 ## Cite 
