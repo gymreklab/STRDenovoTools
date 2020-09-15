@@ -44,10 +44,10 @@ bool file_exists(const std::string& path){
 void show_help() {
   Options default_options;
   std::stringstream help_msg;
-  help_msg << "\nSTRDenovoTools [OPTIONS]"
-	   << "--str-vcf <STR VCF file>"
-	   << "--fam <pedigree file>"
-	   << "--out <outprefix>"
+  help_msg << "\nSTRDenovoTools [OPTIONS] "
+	   << "--strvcf <STR VCF file> "
+	   << "--fam <pedigree file> "
+	   << "--out <outprefix> "
 	   << "\n\nOptions:\n"
 	   << "--gangstr                  Indicates input VCF is from GangSTR\n"
 	   << "********* Naive mutation calling ***************\n"
