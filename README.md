@@ -111,18 +111,22 @@ By default, MonSTR uses a statistical model to compute a posterior probabilty of
 
 #### Model-based calling
 
-TODO describe default values vs. uniform vs. per-locus models, defaults, when each of these gets used
+MonSTR computes a a joint likelihood across parent and child genotypes for all possible genotype configurations compatible with either Mendelian inheritance or a mutation occurring. It then uses these likelihoods to compute the posterior probability of a mutation. Besides genotype likelihoods, which are computed by GangSTR or HipSTR, there are three additional components to the mutation model used:
 
-* `--default-prior <FLOAT>`
-* `--default-beta <FLOAT>`
-* `--default-geomp <FLOAT>`
-* `--default-central <INT>`
-* `--mutation-models <STR>`
 
-TODO genotype priors, what happens by default
+* Prior genotype probabilities, which give the probability to see each possible genotype in the parents. By default, a uniform prior is used, assuming each genotype has equal probability. This not a very realistic prior, but is simple, and we have found using more complex genotype priors makes little to no difference in the results. To instead base prior genotype probabilities on allele frequencies computed from samples in your VCF, use the option `--use-pop-priors`. This option is only supported for HipSTR input.
 
-* `--use-pop-priors`
+* Transition probabilities, which give the probability of mutating from one allele size to another. Here allele size always refers to the number of repeat units. If using GangSTR, or HipSTR sequence-based alleles, MonSTR will assume a uniform probability to mutate from one allele to each other possible alleles. If using HipSTR with the `--combine-alleles-by-length` option, you can additionally specify more complex transition parameters, based on mutation parameters described in [Gymrek, et al. 2017](https://www.nature.com/articles/ng.3952).
 
+  ** GeomP describes the parameter for the geometric step size distribution. If this is equal to 1, all steps are a single unit. If it is less than 1, larger step sizes are allowed. `--default-geomp <FLOAT>` can be used to set a global GeomP value (default: 1.0).
+  ** Beta describes a length dependent directionality bias. If Beta=0, then there is no bias. If Beta > 0, long alleles (relative to a "central" allele) tend to contract and short alleles tend to expand. `--default-beta <FLOAT>` and `--default-central <INT>` can be used to specify a global Beta and central allele value. (defaults Beta=0.0, central allele=0). The central allele is given in terms of the number of repeats relative to the reference genome.
+
+Alternatively you can set per-locus parameters as described below.
+
+* Prior mutation probabilities, which give the per locus per generation mutation rate of a TR. These are used to compute posterior probabilities of mutation. You can set a global log10 mutation rate to be used for all loci with `--defult-prior <FLOAT>` (default -5). Alternatively you can set per-locus parameters as described below.
+
+
+In addition to providing global mutation parameters, you may also specify a file with per-locus parameters using the option `--mutation-models <FILE>`. This file should be whitespace delimited with a single line per locus and no header line. The file should have the following columns present in each line (in order): chromosome, TR start position, TR end position, repeat unit length (bp), log10 mutation rate, beta, geomp, central_allele. The start coordinate must match exactly to the VCF INFO:START field in the HipSTR VCF for each locus.
 
 #### Naive calling
 
