@@ -1,0 +1,5 @@
+sample	numcalls	meanDP	GangSTRCallMinDepth	GangSTRCallMaxDepth	GangSTRCallSpanBoundOnly	GangSTRCallBadCI	GangSTRCallRequireSupport
+Father	43	117.86046511627907	2	0	0	0	0
+HealthyChild	43	114.3953488372093	2	0	0	0	0
+Mother	43	119.97674418604652	2	0	0	0	0
+ProbandChild	43	117.76744186046511	2	0	0	0	0

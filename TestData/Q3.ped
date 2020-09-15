@@ -1,0 +1,4 @@
+Q3	Father	0	0	1	-9
+Q3	Mother	0	0	2	-9
+Q3	HealthyChild	Father	Mother	-9	1
+Q3	ProbandChild	Father	Mother	-9	2
