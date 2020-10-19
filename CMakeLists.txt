@@ -16,6 +16,29 @@ configure_file(MonSTRConfig.h.in MonSTRConfig.h)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+######################### Google Test ############################
+# Download and unpack googletest at configure time
+configure_file(cmake/google_test.cmake googletest-download/CMakeLists.txt)
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+                RESULT_VARIABLE result
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
+if(result)
+        message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+endif()
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+                RESULT_VARIABLE result
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
+if(result)
+        message(FATAL_ERROR "Build step for googletest failed: ${result}")
+endif()
+
+# Add googletest directly to our build. This defines
+# the gtest and gtest_main targets.
+add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
+        ${CMAKE_BINARY_DIR}/googletest-build)
+
+######################### htslib and dependencies ############################
+
 ExternalProject_Add(zlib
         PREFIX ${CMAKE_BINARY_DIR}/thirdparty/zlib
         GIT_REPOSITORY "https://github.com/madler/zlib.git"
@@ -39,12 +62,15 @@ ExternalProject_Add(htslib
         LOG_DOWNLOAD 1
         )
 
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_BINARY_DIR}/thirdparty/zlib/include)
 set(zlib_static ${CMAKE_BINARY_DIR}/thirdparty/zlib/lib/libz.a)
 set(htslib_static ${CMAKE_BINARY_DIR}/thirdparty/htslib/lib/libhts.a)
 include_directories(${CMAKE_BINARY_DIR}/thirdparty/htslib/include)
 add_dependencies(htslib zlib)
+
+######################### monstr code ############################
 
 add_subdirectory(lib)
 
