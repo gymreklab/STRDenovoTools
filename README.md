@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/gymreklab/STRDenovoTools.svg?branch=master)](https://travis-ci.com/gymreklab/STRDenovoTools)
+
 # MonSTR
 
 MonSTR is a toolkit for identifying and analyzing de novo tandem repeat mutations. The core code for calling de novos and parsing VCF files is modified from that originally written by Thomas Willems in the [HipSTR](https://github.com/tfwillems/HipSTR) repository.
