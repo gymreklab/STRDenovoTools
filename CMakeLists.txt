@@ -5,6 +5,8 @@ include(ExternalProject)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_options(-Werror)
 
+enable_testing()
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 
