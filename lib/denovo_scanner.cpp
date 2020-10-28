@@ -453,6 +453,7 @@ int DenovoResult::GetMaxFlankAllele(const std::string flnkstring) {
   for (auto item_iter = flnkreads_items.begin(); item_iter != flnkreads_items.end(); item_iter++) {
     items.clear();
     split_by_delim(*item_iter, ',' ,items);
+    assert(items.size()==2);
     int a = stoi(items[0]);
     int count = stoi(items[1]);
     if (a > maxallele) {
@@ -472,6 +473,7 @@ int DenovoResult::GetFlankLargerThan(const std::string flnkstring, const int& al
   for (auto item_iter = flnkreads_items.begin(); item_iter != flnkreads_items.end(); item_iter++) {
     items.clear();
     split_by_delim(*item_iter, ',' ,items);
+    assert(items.size()==2);
     int a = stoi(items[0]);
     int count = stoi(items[1]);
     if (a > allele) {

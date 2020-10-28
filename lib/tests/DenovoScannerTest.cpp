@@ -21,4 +21,96 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gtest/gtest.h"
 
-// TODO fill in tests of de novo scanner results
+#include <string>
+
+// TODO fill in tests for these functions
+// DenovoResult::GetRepcn
+// DenovoResult::GetTrans
+// DenovoResult::TestTransmission
+// DenovoResult::GetMutSize
+// DenovoResult::GetFRR
+// DenovoResult::GetEnclosing
+// DenovoResult::GetMutationInfo
+// DenovoResult::CalculatePosterior
+// TrioDenovoScanner::naive_scan
+// TrioDenovoScanner::scan
+
+TEST(GetFollowsMI, GetFollowsMI) {
+	// Test TrioDenovoScanner::GetFollowsMI(mother_a, mother_b, father_a, father_b, child_a, child_b, is_chrx, child_sex)
+
+	// Set up TrioDenovoScanner dummy object
+	Options options;
+	PedigreeSet pset;
+	TrioDenovoScanner tds(pset, options);
+
+	// Autosomal
+	ASSERT_TRUE(tds.GetFollowsMI(5, 5, 5, 5, 5, 5, false, SEX_MALE));
+	ASSERT_TRUE(tds.GetFollowsMI(5, 6, 7, 8, 5, 7, false, SEX_MALE));
+	ASSERT_TRUE(tds.GetFollowsMI(5, 6, 7, 8, 6, 7, false, SEX_MALE));
+	ASSERT_TRUE(tds.GetFollowsMI(5, 6, 7, 8, 6, 8, false, SEX_MALE));
+	ASSERT_FALSE(tds.GetFollowsMI(5, 5, 5, 5, 6, 5, false, SEX_MALE));
+	ASSERT_FALSE(tds.GetFollowsMI(5, 5, 5, 5, 5, 6, false, SEX_MALE));
+	ASSERT_FALSE(tds.GetFollowsMI(5, 5, 5, 5, 6, 6, false, SEX_MALE));
+	ASSERT_FALSE(tds.GetFollowsMI(7, 7, 5, 5, 5, 5, false, SEX_MALE));
+	ASSERT_FALSE(tds.GetFollowsMI(5, 5, 7, 7, 5, 5, false, SEX_MALE));
+
+	// ChrX - male
+	ASSERT_TRUE(tds.GetFollowsMI(5, 5, 6, 6, 5, 5, true, SEX_MALE));
+	ASSERT_TRUE(tds.GetFollowsMI(5, 7, 6, 6, 7, 7, true, SEX_MALE));
+	ASSERT_FALSE(tds.GetFollowsMI(5, 7, 6, 6, 6, 7, true, SEX_MALE));
+	ASSERT_FALSE(tds.GetFollowsMI(5, 7, 6, 6, 6, 6, true, SEX_MALE));
+
+	// ChrX - female
+	ASSERT_FALSE(tds.GetFollowsMI(5, 5, 6, 6, 5, 5, true, SEX_FEMALE));
+	ASSERT_FALSE(tds.GetFollowsMI(5, 7, 6, 6, 7, 7, true, SEX_FEMALE));
+	ASSERT_TRUE(tds.GetFollowsMI(5, 7, 6, 6, 6, 7, true, SEX_FEMALE));
+	ASSERT_TRUE(tds.GetFollowsMI(5, 7, 6, 6, 5, 6, true, SEX_FEMALE));
+}
+
+TEST(GetMaxFlankAllele, GetMaxFlankAllele) {
+	// Test DenovoResult::GetMaxFlankAllele(const std::string flnkstring)
+	// flnkstring is NULL, or allele1,reads1|allele2,reads2...
+
+	// Set up dummy DenovoResult
+	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, 0, 0, -8);
+
+	std::string flnkstring = "NULL";
+	ASSERT_EQ(dnr.GetMaxFlankAllele(flnkstring), 0);
+
+	flnkstring = "10,6";
+	ASSERT_EQ(dnr.GetMaxFlankAllele(flnkstring), 10);
+
+	flnkstring = "10,6|12,2";
+	ASSERT_EQ(dnr.GetMaxFlankAllele(flnkstring), 12);
+
+	flnkstring = "25,100|10,6|12,2";
+	ASSERT_EQ(dnr.GetMaxFlankAllele(flnkstring), 25);
+
+	flnkstring = "dummystring";
+	ASSERT_DEATH(dnr.GetMaxFlankAllele(flnkstring), "");
+}
+
+TEST(GetFlankLargerThan, GetFlankLargerThan) {
+	// Test DenovoResult::GetFlankLargerThan(const std::string flnkstring, const int& allele)
+	// flnkstring is NULL, or allele1,reads1|allele2,reads2...
+	// Count how many flanks support a count > allele
+
+	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, 0, 0, -8);
+
+	std::string flnkstring = "NULL";
+	ASSERT_EQ(dnr.GetFlankLargerThan(flnkstring, 0), 0);
+
+	flnkstring = "10,6";
+	ASSERT_EQ(dnr.GetFlankLargerThan(flnkstring, 8), 6);
+	ASSERT_EQ(dnr.GetFlankLargerThan(flnkstring, 10), 0);
+	ASSERT_EQ(dnr.GetFlankLargerThan(flnkstring, 12), 0);
+
+	flnkstring = "25,100|10,6|12,2";
+	ASSERT_EQ(dnr.GetFlankLargerThan(flnkstring, 8), 108);
+	ASSERT_EQ(dnr.GetFlankLargerThan(flnkstring, 10), 102);
+	ASSERT_EQ(dnr.GetFlankLargerThan(flnkstring, 12), 100);
+	ASSERT_EQ(dnr.GetFlankLargerThan(flnkstring, 30), 0);
+
+	flnkstring = "dummystring";
+	ASSERT_DEATH(dnr.GetFlankLargerThan(flnkstring, 0), "");
+}
