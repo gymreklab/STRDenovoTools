@@ -24,14 +24,12 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 #include <string>
 
-// TODO fill in tests for these functions
-// DenovoResult::GetMutationInfo
-// DenovoResult::CalculatePosterior
-
-// TODO Need test input files for these:
+// TODO Need test input VCF files set up for these:
 // DenovoResult::GetRepcn
 // TrioDenovoScanner::naive_scan
 // TrioDenovoScanner::scan
+// DenovoResult::GetMutationInfo
+
 
 TEST(GetFollowsMI, GetFollowsMI) {
 	// Test TrioDenovoScanner::GetFollowsMI(mother_a, mother_b, father_a, father_b, child_a, child_b, is_chrx, child_sex)
