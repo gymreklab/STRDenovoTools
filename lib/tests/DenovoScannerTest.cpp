@@ -29,6 +29,11 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 
 // ********* tests below don't rely on reading in test files ***** //
+
+// TODO bool DenovoResult::GetPOOMutationInfo(const bool& chrX) {
+// TODO bool DenovoResult::CheckReadFilters(const Options& options, const VCF::Variant& variant);
+// TODO bool DenovoResult::NaiveExpansionDetection(const Options& options, const VCF::Variant& variant) 
+
 TEST(GetFollowsMI, GetFollowsMI) {
 	// Test TrioDenovoScanner::GetFollowsMI(mother_a, mother_b, father_a, father_b, child_a, child_b, is_chrx, child_sex)
 
@@ -396,13 +401,6 @@ TEST_F(DenovoScannerTest, GetRepcn) {
 	dnr.GetRepcn(str_variant, 3, &repcn_a, &repcn_b);
 	ASSERT_EQ(repcn_a, 5);
 	ASSERT_EQ(repcn_b, 5);
-}
-
-TEST_F(DenovoScannerTest, GetMutationInfo) {
-	// TODO - test DenovoResult::GetMutationInfo
-
-	// Set up VCF
-	VCF::VCFReader strvcf(vcffile);
 }
 
 TEST_F(DenovoScannerTest, NaiveScan) {

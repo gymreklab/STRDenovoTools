@@ -604,19 +604,138 @@ void DenovoResult::GetEnclosing(const std::string& enclstring, int& new_allele,
   }
 }
 
+
 /*
-  Get a lot of metadata about the mutation
-    poocase: describes inheritance pattern
+  Infer parent of origin and mutation size info
+
+  Sets:
+   new_allele_
+   mut_size_
+   poocase_
+   new_allele_in_parents_
+
+  Returns false if Mendelian, true otherwise
+
+      poocase: describes inheritance pattern
     0: unknown
     1: Mendelian (no denovo)
     2: New allele from father
     3: New allele from mother
     4: Unclear
- */
-void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& variant,
-				   bool* filter_mutation) {
-  *filter_mutation = false;
-  int32_t period; variant.get_INFO_value_single_int(PERIOD_KEY, period);
+
+*/
+bool DenovoResult::GetPOOMutationInfo(const bool& chrX) {
+  if (! vcfinfo_set_) {
+    PrintMessageDieOnError("Can't run GetPOOMutationInfo before setting VCF info", M_ERROR);
+  }
+
+  new_allele_ = 0;
+  poocase_ = 0; // 1=Mendelian 2=new allele from father, 3=new allele from mother, 4=not in anyone
+
+  if (chrX && child_sex_ == SEX_MALE) {
+    // Case 1: Mendelian
+    if ((child_gt_a_ == mat_gt_a_ || child_gt_a_  == mat_gt_b_)) {
+      poocase_ = 1;
+      new_allele_in_parents_ = true;
+      new_allele_ = 0;
+      mut_size_ = 0;
+      return false;
+    }
+    // Case 3: New allele from mother
+    // Allele a not in mother
+    if ((child_gt_a_ != mat_gt_a_ && child_gt_a_ != mat_gt_b_)) {
+      new_allele_ = child_gt_a_;
+      poocase_ = 3;
+      mut_size_ = GetMutSize(new_allele_, mat_gt_a_, mat_gt_b_);
+    }
+    // Case 4: new allele not in either parent at all and we haven't figured it out yet
+    if (poocase_ == 0 && child_gt_a_ != mat_gt_a_  && child_gt_a_ != mat_gt_b_) {
+      new_allele_ = child_gt_a_;
+      poocase_ = 4;
+      mut_size_ = GetMutSize(new_allele_, mat_gt_a_ , mat_gt_b_);
+    }
+    if (new_allele_ == mat_gt_a_  || new_allele_ == mat_gt_b_) {
+      new_allele_in_parents_ = true;
+    }
+  }
+  else {
+    // Case 1: Mendelian
+    if ((child_gt_a_ == mat_gt_a_ || child_gt_a_ == mat_gt_b_) &&
+        (child_gt_b_ == pat_gt_a_ || child_gt_b_ == pat_gt_b_)) {
+      poocase_ = 1;
+      new_allele_in_parents_ = true;
+      new_allele_ = 0;
+      mut_size_ = 0;
+      return false;
+    }
+    if ((child_gt_a_ == pat_gt_a_  || child_gt_a_ == pat_gt_b_ ) &&
+        (child_gt_b_ == mat_gt_a_  || child_gt_b_ == mat_gt_b_)) {
+      poocase_ = 1;
+      new_allele_in_parents_ = true;
+      new_allele_ = 0;
+      mut_size_ = 0;
+      return false;
+    }
+    // Case 2: new allele from father.
+    // Allele a in mother only, allele b not in father
+    if ((child_gt_a_ == mat_gt_a_ || child_gt_a_ == mat_gt_b_) &&
+        (child_gt_a_ != pat_gt_a_ && child_gt_a_ != pat_gt_b_) &&
+        (child_gt_b_ != pat_gt_a_  && child_gt_b_ != pat_gt_b_)) {
+      new_allele_ = child_gt_b_;
+      poocase_ = 2;
+      mut_size_ = GetMutSize(new_allele_, pat_gt_a_, pat_gt_b_);
+    }
+    // Allele b in mother only, allele a not in father
+    if ((child_gt_b_  == mat_gt_a_ || child_gt_b_  == mat_gt_b_) &&
+        (child_gt_b_  != pat_gt_a_ && child_gt_b_  != pat_gt_b_) &&
+        (child_gt_a_ != pat_gt_a_ && child_gt_a_ != pat_gt_b_)) {
+      new_allele_ = child_gt_a_;
+      poocase_ = 2;
+      mut_size_ = GetMutSize(new_allele_, pat_gt_a_, pat_gt_b_);
+    }
+    // Case 3: New allele from mother
+    // Allele a in father only, allele b not in mother
+    if ((child_gt_a_ == pat_gt_a_ || child_gt_a_ == pat_gt_b_) &&
+        (child_gt_a_ != mat_gt_a_ && child_gt_a_ != mat_gt_b_) &&
+        (child_gt_b_ != mat_gt_a_ && child_gt_b_ != mat_gt_b_)) {
+      new_allele_ = child_gt_b_;
+      poocase_ = 3;
+      mut_size_ = GetMutSize(new_allele_, mat_gt_a_, mat_gt_b_);
+    }
+    // Allele b in father only, allele a not in mother
+    if ((child_gt_b_ == pat_gt_a_ || child_gt_b_ == pat_gt_b_) &&
+        (child_gt_b_ != mat_gt_a_ && child_gt_b_ != mat_gt_b_) &&
+        (child_gt_a_ != mat_gt_a_ && child_gt_a_ != mat_gt_b_)) {
+      new_allele_ = child_gt_a_;
+      poocase_ = 3;
+      mut_size_ = GetMutSize(new_allele_, mat_gt_a_, mat_gt_b_);
+    }
+    // Case 4: new allele not in either parent at all and we haven't figured it out yet
+    if (poocase_ == 0 && child_gt_a_ != mat_gt_a_ && child_gt_a_ != mat_gt_b_ &&
+        child_gt_a_ != pat_gt_a_ && child_gt_a_ != pat_gt_b_) {
+      new_allele_ = child_gt_a_;
+      poocase_ = 4;
+      mut_size_ = GetMutSize(new_allele_, mat_gt_a_, mat_gt_b_, pat_gt_a_, pat_gt_b_);
+    }
+    if (poocase_ == 0 && child_gt_b_ != mat_gt_a_ && child_gt_b_ != mat_gt_b_ &&
+        child_gt_b_ != pat_gt_a_ && child_gt_b_ != pat_gt_b_) {
+      new_allele_ = child_gt_b_;
+      poocase_ = 4;
+      mut_size_ = GetMutSize(new_allele_, mat_gt_a_, mat_gt_b_, pat_gt_a_, pat_gt_b_);
+    }
+
+    if (new_allele_ == mat_gt_a_ || new_allele_ == mat_gt_b_ ||
+        new_allele_ == pat_gt_a_ || new_allele_ == pat_gt_b_) {
+      new_allele_in_parents_ = true;
+    }
+  }
+  return true;
+}
+
+/*
+  Set info extracted from the VCF file
+*/
+void DenovoResult::SetVCFInfo(const VCF::Variant& variant) {
   // *** First set genotypes *** //
   int repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b, repcn_child_a, repcn_child_b;
   GetRepcn(variant, mother_ind_, &repcn_mother_a, &repcn_mother_b);
@@ -629,112 +748,19 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
   mat_gt_a_ = repcn_mother_a; mat_gt_b_ = repcn_mother_b;
   pat_gt_a_ = repcn_father_a; pat_gt_b_ = repcn_father_b;
 
-  // *** Figure out new allele and POO *** //
-  new_allele_ = 0;
-  poocase_ = 0; // 1=Mendelian 2=new allele from father, 3=new allele from mother, 4=not in anyone
+  vcfinfo_set_ = true;
+}
 
-  if (options.chrX && child_sex_ == SEX_MALE) {
-    // Case 1: Mendelian
-    if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b)) {
-      poocase_ = 1;
-      new_allele_in_parents_ = true;
-      new_allele_ = 0;
-      mut_size_ = 0;
-      return;
-    }
-    // Case 3: New allele from mother
-    // Allele a not in mother
-    if ((repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b)) {
-      new_allele_ = repcn_child_a;
-      poocase_ = 3;
-      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
-    }
-    // Case 4: new allele not in either parent at all and we haven't figured it out yet
-    if (poocase_ == 0 && repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b) {
-      new_allele_ = repcn_child_a;
-      poocase_ = 4;
-      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
-    }
-    if (new_allele_ == repcn_mother_a || new_allele_ == repcn_mother_b) {
-      new_allele_in_parents_ = true;
-    }
-  }
-  else {
-    // Case 1: Mendelian
-    if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b) &&
-        (repcn_child_b == repcn_father_a || repcn_child_b == repcn_father_b)) {
-      poocase_ = 1;
-      new_allele_in_parents_ = true;
-      new_allele_ = 0;
-      mut_size_ = 0;
-      return;
-    }
-    if ((repcn_child_a == repcn_father_a || repcn_child_a == repcn_father_b) &&
-        (repcn_child_b == repcn_mother_a || repcn_child_b == repcn_mother_b)) {
-      poocase_ = 1;
-      new_allele_in_parents_ = true;
-      new_allele_ = 0;
-      mut_size_ = 0;
-      return;
-    }
-    // Case 2: new allele from father.
-    // Allele a in mother only, allele b not in father
-    if ((repcn_child_a == repcn_mother_a || repcn_child_a == repcn_mother_b) &&
-        (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) &&
-        (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b)) {
-      new_allele_ = repcn_child_b;
-      poocase_ = 2;
-      mut_size_ = GetMutSize(new_allele_, repcn_father_a, repcn_father_b);
-    }
-    // Allele b in mother only, allele a not in father
-    if ((repcn_child_b == repcn_mother_a || repcn_child_b == repcn_mother_b) &&
-        (repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) &&
-        (repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b)) {
-      new_allele_ = repcn_child_a;
-      poocase_ = 2;
-      mut_size_ = GetMutSize(new_allele_, repcn_father_a, repcn_father_b);
-    }
-    // Case 3: New allele from mother
-    // Allele a in father only, allele b not in mother
-    if ((repcn_child_a == repcn_father_a || repcn_child_a == repcn_father_b) &&
-        (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b) &&
-        (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b)) {
-      new_allele_ = repcn_child_b;
-      poocase_ = 3;
-      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
-    }
-    // Allele b in father only, allele a not in mother
-    if ((repcn_child_b == repcn_father_a || repcn_child_b == repcn_father_b) &&
-        (repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b) &&
-        (repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b)) {
-      new_allele_ = repcn_child_a;
-      poocase_ = 3;
-      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b);
-    }
-    // Case 4: new allele not in either parent at all and we haven't figured it out yet
-    if (poocase_ == 0 && repcn_child_a != repcn_mother_a && repcn_child_a != repcn_mother_b &&
-        repcn_child_a != repcn_father_a && repcn_child_a != repcn_father_b) {
-      new_allele_ = repcn_child_a;
-      poocase_ = 4;
-      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b);
-    }
-    if (poocase_ == 0 && repcn_child_b != repcn_mother_a && repcn_child_b != repcn_mother_b &&
-        repcn_child_b != repcn_father_a && repcn_child_b != repcn_father_b) {
-      new_allele_ = repcn_child_b;
-      poocase_ = 4;
-      mut_size_ = GetMutSize(new_allele_, repcn_mother_a, repcn_mother_b, repcn_father_a, repcn_father_b);
-    }
-    if ((repcn_child_a == new_allele_) && (repcn_child_b == new_allele_) & options.filter_hom) {
-      *filter_mutation = true;
-      return;
-    }
-    if (new_allele_ == repcn_mother_a || new_allele_ == repcn_mother_b ||
-        new_allele_ == repcn_father_a || new_allele_ == repcn_father_b) {
-      new_allele_in_parents_ = true;
-    }
+/*
+  Check read filters
+
+  Return true if passing, else false
+*/
+bool DenovoResult::CheckReadFilters(const Options& options, const VCF::Variant& variant) {
+  if (!vcfinfo_set_) {
+    SetVCFInfo(variant);
   }
   // *** Get enclosing read info to set filter *** //
-  // Extract enclreads and flnkreads
   std::vector<std::string> enclreads;
   variant.get_FORMAT_value_single_string(ENCLREADS_KEY, enclreads);
   int encl_child, total_encl_child, child_encl_match;
@@ -742,17 +768,15 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
   int encl_father, total_encl_father, father_encl_match;
   float encl_reads_perc_parent = 0;;
 
-  if (options.debug) {
-    cerr << "Checking new allele " << new_allele_ << endl;
-    cerr << "child=" << enclreads[child_ind_] << " mother=" << enclreads[mother_ind_] << " father=" << enclreads[father_ind_] << endl;
-  }
-  GetEnclosing(enclreads[child_ind_], new_allele_, repcn_child_a, repcn_child_b, &encl_child, &total_encl_child, &child_encl_match);
-  GetEnclosing(enclreads[mother_ind_], new_allele_, repcn_mother_a, repcn_mother_b, &encl_mother, &total_encl_mother, &mother_encl_match);
-  GetEnclosing(enclreads[father_ind_], new_allele_, repcn_father_a, repcn_father_b, &encl_father, &total_encl_father, &father_encl_match);
+  GetEnclosing(enclreads[child_ind_], new_allele_, child_gt_a_, child_gt_b_, &encl_child, &total_encl_child, &child_encl_match);
+  GetEnclosing(enclreads[mother_ind_], new_allele_, mat_gt_a_, mat_gt_b_, &encl_mother, &total_encl_mother, &mother_encl_match);
+  GetEnclosing(enclreads[father_ind_], new_allele_, pat_gt_a_, pat_gt_b_, &encl_father, &total_encl_father, &father_encl_match);
+
   // Set in dnr_iter
   encl_reads_child_ = encl_child;
   encl_reads_mother_ = encl_mother;
   encl_reads_father_ = encl_father;
+
   if (poocase_ == 2) {
     encl_reads_parent_ = encl_reads_father_;
     encl_reads_perc_parent = (float)encl_father/(float)total_encl_father;
@@ -768,46 +792,54 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
       encl_reads_perc_parent = (float)encl_mother/(float)total_encl_mother;
     }
   }
-  // *** Do checks *** //
+
   // Total enclosing
   if ((total_encl_child < options.min_total_encl) ||
       (total_encl_mother < options.min_total_encl) ||
       (total_encl_father < options.min_total_encl)) {
-    if (options.debug) {cerr << "Reject based on total enclosing" << endl;}
-    *filter_mutation = true;
-    if (!options.naive_expansion_detection) {return;}
+    if (options.debug) {cerr << "reject based on total enclosing reads" << endl;}
+    return false;
   }
   // Messiness
   if (((float)child_encl_match/(float)total_encl_child < options.min_encl_match) ||
       ((float)mother_encl_match/(float)total_encl_mother < options.min_encl_match) ||
       ((float)father_encl_match/(float)total_encl_father < options.min_encl_match)) {
     if (options.debug) {cerr << "reject based on messy enclosing reads" << endl;}
-    *filter_mutation = true;
-    if (!options.naive_expansion_detection) {return;}
+    return false;
   }
   // Enclosing matching new allele
   if (encl_child < options.min_num_encl_child) {
     if (options.debug) {cerr << "reject based on child encl: " << encl_child << endl;}
-    *filter_mutation = true;
-    if (!options.naive_expansion_detection) {return;}
+    return false;
   }
   if (encl_reads_parent_ > options.max_num_encl_parent) {
     if (options.debug) {cerr << "reject based on num encl in parents" << endl;}
-    *filter_mutation = true;
-    if (!options.naive_expansion_detection) {return;}
+    return false;
   }
   if (encl_reads_perc_parent > options.max_perc_encl_parent) {
     if (options.debug) {cerr << "reject based on perc encl in parents" << endl;}
-    *filter_mutation = true;
-    if (!options.naive_expansion_detection) {return;}
+    return false;
   }
+  return true;
+}
 
-  // If mutation passed already, we're good
-  if (!filter_mutation) {return;}
-  // If not, and we didn't return yet, we're doing expansion detection.
-  if (!options.naive_expansion_detection) {return;}
+/*
+  Apply naive expansion detection
+  Return false if no expansion or filtered
+*/
+bool DenovoResult::NaiveExpansionDetection(const Options& options, const VCF::Variant& variant) {
+  // Extract enclosing
+  std::vector<std::string> enclreads;
+  variant.get_FORMAT_value_single_string(ENCLREADS_KEY, enclreads);
+  int encl_child, total_encl_child, child_encl_match;
+  int encl_mother, total_encl_mother, mother_encl_match;
+  int encl_father, total_encl_father, father_encl_match;
+  float encl_reads_perc_parent = 0;;
 
-  // *** Apply naive expansion detection - first looking at FRR *** //
+  GetEnclosing(enclreads[child_ind_], new_allele_, child_gt_a_, child_gt_b_, &encl_child, &total_encl_child, &child_encl_match);
+  GetEnclosing(enclreads[mother_ind_], new_allele_, mat_gt_a_, mat_gt_b_, &encl_mother, &total_encl_mother, &mother_encl_match);
+  GetEnclosing(enclreads[father_ind_], new_allele_, pat_gt_a_, pat_gt_b_, &encl_father, &total_encl_father, &father_encl_match);
+
   // Extract number of FRRs from RC field and FLNKREADS field
   std::vector<std::string> readcounts, flnkreads;
   variant.get_FORMAT_value_single_string(RC_KEY, readcounts);
@@ -816,42 +848,72 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
   GetFRR(readcounts[child_ind_], &frr_child);
   GetFRR(readcounts[mother_ind_], &frr_mother);
   GetFRR(readcounts[father_ind_], &frr_father);
+
   // First, if we see no enclosing reads at all that is a bad sign and we should just quit.
   // Note this might not be always desirable
   if (enclreads[child_ind_] == "NULL" && enclreads[mother_ind_] == "NULL" && enclreads[father_ind_] == "NULL") {
-    //    cerr << "***Rejecting possible expansion*** " << readcounts[child_ind_] << " " << readcounts[mother_ind_] << " " << readcounts[father_ind_] << endl;
-    //cerr << "child=" << enclreads[child_ind_] << " mother=" << enclreads[mother_ind_] << " father=" << enclreads[father_ind_] << endl;
-    //cerr << "child=" << flnkreads[child_ind_] << " mother=" << flnkreads[mother_ind_] << " father=" << flnkreads[father_ind_] << endl;
-    *filter_mutation = true;
-    return;
+    return false;
   }
   // Test if child has many FRRs with none in parents
   int max_parent_frr = 0; // TODO make an option?
   if (frr_mother <= max_parent_frr && frr_father <= max_parent_frr && frr_child >= options.min_exp_frr) {
-    //    cerr << "***Found possible expansion*** " << readcounts[child_ind_] << " " << readcounts[mother_ind_] << " " << readcounts[father_ind_] << endl;
-    //cerr << "child=" << enclreads[child_ind_] << " mother=" << enclreads[mother_ind_] << " father=" << enclreads[father_ind_] << endl;
-    //cerr << "child=" << flnkreads[child_ind_] << " mother=" << flnkreads[mother_ind_] << " father=" << flnkreads[father_ind_] << endl;
-    *filter_mutation = false;
     posterior_ = -1; // TODO for now, so we can easily find
-    return;
+    return true;
   }
 
   // *** Apply naive expansion detection - second looking at flanks *** //
   // First get max parent allele size either in flanks or enclosing
   int max_parent_allele = std::max(std::max(GetMaxFlankAllele(enclreads[mother_ind_]), GetMaxFlankAllele(enclreads[father_ind_])),
-				   std::max(GetMaxFlankAllele(flnkreads[mother_ind_]), GetMaxFlankAllele(flnkreads[father_ind_])));
+           std::max(GetMaxFlankAllele(flnkreads[mother_ind_]), GetMaxFlankAllele(flnkreads[father_ind_])));
   // Then get num child flank reads > max parent allele size
   int num_large_child_flank = GetFlankLargerThan(flnkreads[child_ind_], max_parent_allele);
   if (num_large_child_flank >= options.min_exp_flnk) {
-    cerr << "***Found possible expansion*** " << readcounts[child_ind_] << " " << readcounts[mother_ind_] << " " << readcounts[father_ind_] << endl;
-    cerr << "child=" << child_gt_ << " mother="<< mat_gt_ << " father=" << pat_gt_ << endl;
-    cerr << "child=" << enclreads[child_ind_] << " mother=" << enclreads[mother_ind_] << " father=" << enclreads[father_ind_] << endl;
-    cerr << "child=" << flnkreads[child_ind_] << " mother=" << flnkreads[mother_ind_] << " father=" << flnkreads[father_ind_] << endl;
-    *filter_mutation = false;
     posterior_ = -1; // TODO for now, so we can easily find
+    return true;
+  }
+  return false;
+}
+
+/*
+  Get a lot of metadata about the mutation
+
+  1. Infer parent of origin/mutationsize/new allele
+  2. Check if mutation should be filtered
+  3. Apply naive expansion detection
+
+ */
+void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& variant,
+				   bool* filter_mutation) {
+  // Set up
+  *filter_mutation = false;
+  SetVCFInfo(variant);
+
+  // *** Figure out new allele and POO *** //
+  if (!GetPOOMutationInfo(options.chrX)) {
+    return; // Mendelian
+  }
+
+
+  // *** Check if we should filter *** //
+  if ((child_gt_a_ == new_allele_) && (child_gt_b_ == new_allele_) & options.filter_hom) {
+      *filter_mutation = true;
+      return;
+  }
+  if (!CheckReadFilters(options, variant)) {
+    *filter_mutation = true;
     return;
   }
-  return;
+
+  // If mutation passed already, we're good
+  if (!filter_mutation) {return;}
+
+  // *** Apply naive expansion detection - first looking at FRR *** //
+  // If not, and we didn't return yet, we're doing expansion detection.
+  if (!options.naive_expansion_detection) {return;}
+  if (!NaiveExpansionDetection(options, variant)) {
+    *filter_mutation = true;
+    return;
+  }
 }
 
 void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,

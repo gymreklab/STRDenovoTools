@@ -97,6 +97,10 @@ class DenovoResult {
   void CalculatePosterior();
   void GetRepcn(const VCF::Variant& variant, const int32_t& sample_ind,
     int* repcn_a, int* repcn_b);
+  void SetVCFInfo(const VCF::Variant& variant);
+  bool GetPOOMutationInfo(const bool& chrX);
+  bool CheckReadFilters(const Options& options, const VCF::Variant& variant);
+  bool NaiveExpansionDetection(const Options& options, const VCF::Variant& variant);
 
  private:
   static std::string PERIOD_KEY;
@@ -113,6 +117,8 @@ class DenovoResult {
   double total_ll_one_denovo_;
   double posterior_;
   double log10_prior_mutation_;
+
+  bool vcfinfo_set_ = false; // did we set VCF information yet?
 
   // Genotype info
   std::string child_gt_;
