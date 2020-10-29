@@ -25,7 +25,6 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO fill in tests for these functions
 // DenovoResult::GetRepcn
-// DenovoResult::TestTransmission
 // DenovoResult::GetMutSize
 // DenovoResult::GetFRR
 // DenovoResult::GetEnclosing
@@ -205,4 +204,14 @@ TEST(TestTransmission, TestTransmission) {
 	dnr.TestTransmission(&long_mother, &long_father);
 	ASSERT_EQ(long_mother, 0);
 	ASSERT_EQ(long_father, 0);
+}
+
+TEST(TestMutSize, TestMutSize) {
+	// Test int DenovoResult::GetMutSize(const int& new_allele, const int& a1, const int& a2)
+
+	// Set up dummy DenovoResult
+	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, 0, 0, -8);
+
+	ASSERT_EQ(dnr.GetMutSize(10, 10, 15), 0);
+
 }
