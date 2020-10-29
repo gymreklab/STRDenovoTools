@@ -140,7 +140,7 @@ MonSTR computes a a joint likelihood across parent and child genotypes for all p
 
 Alternatively you can set per-locus parameters as described below.
 
-* Prior mutation probabilities, which give the per locus per generation mutation rate of a TR. These are used to compute posterior probabilities of mutation. You can set a global log10 mutation rate to be used for all loci with `--defult-prior <FLOAT>` (default -5). Alternatively you can set per-locus parameters as described below.
+* Prior mutation probabilities, which give the per locus per generation mutation rate of a TR. These are used to compute posterior probabilities of mutation. You can set a global log10 mutation rate to be used for all loci with `--defult-prior <FLOAT>` (default -3). Alternatively you can set per-locus parameters as described below.
 
 
 In addition to providing global mutation parameters, you may also specify a file with per-locus parameters using the option `--mutation-models <FILE>`. This file should be whitespace delimited with a single line per locus and no header line. The file should have the following columns present in each line (in order): chromosome, TR start position, TR end position, repeat unit length (bp), log10 mutation rate, beta, geomp, central_allele. The start coordinate must match exactly to the VCF INFO:START field in the HipSTR VCF for each locus.

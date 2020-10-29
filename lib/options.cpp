@@ -48,7 +48,7 @@ Options::Options() {
   family = "";
   locus = "";
 
-  default_prior = -5.0;
+  default_prior = -3.0;
   default_beta = 0.0;
   default_pgeom = 1.0;
   default_central = 0;
