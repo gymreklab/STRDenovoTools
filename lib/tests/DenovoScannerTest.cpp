@@ -21,11 +21,10 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gtest/gtest.h"
 
+#include <math.h>
 #include <string>
 
 // TODO fill in tests for these functions
-// DenovoResult::GetFRR
-// DenovoResult::GetEnclosing
 // DenovoResult::GetMutationInfo
 // DenovoResult::CalculatePosterior
 
@@ -250,6 +249,81 @@ TEST(TestGetFRR, TestGetFRR) {
 	ASSERT_DEATH(dnr.GetFRR(rcstring, &frrcount), "Invalid RC string encountered .*");
 	rcstring = "0,0,";
 	ASSERT_DEATH(dnr.GetFRR(rcstring, &frrcount), "Invalid RC string encountered .*");
-
 }
 
+TEST(TestGetEnclosing, TestGetEnclosing) {
+	// Test DenovoResult::GetEnclosing(const std::string& enclstring, int& new_allele,
+	//			const int32_t& repcn_a, const int32_t& repcn_b,
+	//			int* encl_newallele, int* encl_total, int* encl_match) 
+
+	// Set up dummy DenovoResult
+	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, 0, 0, -8);
+	int encl_newallele, encl_total, encl_match;
+
+	std::string enclstring = "4,5|10,6|11,2";
+	int repcn_a = 4;
+	int repcn_b = 10;
+	int new_allele=10;
+	dnr.GetEnclosing(enclstring, new_allele, repcn_a, repcn_b,
+		&encl_newallele, &encl_total, &encl_match);
+	ASSERT_EQ(encl_newallele, 6);
+	ASSERT_EQ(encl_total, 13);
+	ASSERT_EQ(encl_match, 11);
+
+	enclstring = "NULL";
+	dnr.GetEnclosing(enclstring, new_allele, repcn_a, repcn_b,
+		&encl_newallele, &encl_total, &encl_match);
+	ASSERT_EQ(encl_newallele, 0);
+	ASSERT_EQ(encl_total, 0);
+	ASSERT_EQ(encl_match, 0);
+
+	enclstring = "4,5|10,6|11,2";
+	new_allele = 13;
+	dnr.GetEnclosing(enclstring, new_allele, repcn_a, repcn_b,
+		&encl_newallele, &encl_total, &encl_match);
+	ASSERT_EQ(encl_newallele, 0);
+	ASSERT_EQ(encl_total, 13);
+	ASSERT_EQ(encl_match, 11);
+
+	enclstring = "dummystring";
+	ASSERT_DEATH(dnr.GetEnclosing(enclstring, new_allele, repcn_a, repcn_b,
+		&encl_newallele, &encl_total, &encl_match), "Invalid enclreads .*");
+}
+
+TEST(TestCalculatePosterior, TestCalculatePosterior) {
+	// Test DenovoResult::CalculatePosterior() 
+
+	// Dummy case that forces posterior to 0
+	double total_ll_no_mutation = 0;
+	double total_ll_one_denovo = 0;
+	double log10prior = -8;
+	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, total_ll_no_mutation, total_ll_one_denovo, log10prior);
+	dnr.CalculatePosterior();
+	ASSERT_NEAR(dnr.get_posterior(), 0, 0.00001);
+
+	// Dummy case that forces posterior to 1
+	total_ll_no_mutation = -10000;
+	total_ll_one_denovo = 0;
+	log10prior = -8;
+	DenovoResult dnr2("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, total_ll_no_mutation, total_ll_one_denovo, log10prior);
+	dnr2.CalculatePosterior();
+	ASSERT_NEAR(dnr2.get_posterior(), 1, 0.00001);
+
+	// zero posterior
+	dnr2.zero_posterior();
+	ASSERT_EQ(dnr2.get_posterior(), 0);
+
+	// More complicated example
+	// posterior = P(mut|data) = P(data|mut)*P(mut)/denom
+	// denom = P(data|mut)*P(mut) + P(data|nomut)*P(nomut)
+	// Using P(mut)=0.1, P(nomut)=0.9, P(data|mut)=0.20, P(data|nomut)=0.10
+	//    num = 0.20*0.1 = 0.02 
+	//    denom = 0.20*0.1+0.10*0.9 = 0.11
+	//    post = 0.02/0.11 = 0.18181818
+	total_ll_no_mutation = log10(0.10);
+	total_ll_one_denovo = log10(0.20);
+	log10prior = log10(0.10);
+	DenovoResult dnr3("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, total_ll_no_mutation, total_ll_one_denovo, log10prior);
+	dnr3.CalculatePosterior();
+	ASSERT_NEAR(dnr3.get_posterior(), 0.1818, 0.01);
+}

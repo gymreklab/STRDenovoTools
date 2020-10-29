@@ -580,6 +580,9 @@ void DenovoResult::GetEnclosing(const std::string& enclstring, int& new_allele,
   split_by_delim(enclstring, '|', enclreads_items);
   for (auto item_iter = enclreads_items.begin(); item_iter != enclreads_items.end(); item_iter++) {
     split_by_delim(*item_iter, ',', items);
+    if (items.size() != 2) {
+      PrintMessageDieOnError("Invalid enclreads " + enclstring, M_ERROR);
+    }
     int allele = stoi(items[0]);
     int count = stoi(items[1]);
     *encl_total += count;
@@ -1035,8 +1038,11 @@ DenovoResult::DenovoResult(const std::string& family_id,
 void DenovoResult::CalculatePosterior() {
   double log10_prior_nomut = log10(1-pow(10, log10_prior_mutation_));
   // Note, all likelihoods in log10, but fast_log_sum_exp assumes log_e
-  double denom = fast_log_sum_exp((total_ll_one_denovo_+log10_prior_mutation_)*log(10),
-				  (total_ll_no_mutation_+log10_prior_nomut)*log(10))*log10(exp(1)); // Converts denom to log10
+  // denom is p(data|nomut)*p(nomut) + p(data|mut)*p(mut)
+  // log10 p(data|nomut)*p(nomut) = total_ll_no_mutation_+ log10_prior_nomut
+  // log10 p(data|mut)*p(mut) = total_ll_one_denovo_+ log10_prior_nomut
+  double denom = fast_log_sum_exp((total_ll_one_denovo_  + log10_prior_mutation_)*log(10),
+				                          (total_ll_no_mutation_ + log10_prior_nomut)*log(10)) *log10(exp(1)); // Converts denom to log10
   double posterior = pow(10, total_ll_one_denovo_+log10_prior_mutation_ - denom);
   posterior_ = posterior;
 }

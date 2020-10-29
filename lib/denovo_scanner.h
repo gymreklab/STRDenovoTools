@@ -91,10 +91,13 @@ class DenovoResult {
   int GetMutSize(const int& new_allele, const int& a1, const int& a2);
   int GetMutSize(const int& new_allele, const int& a1, const int& a2, const int& a3, const int& a4);
   void GetFRR(const std::string& rcstring, int* frrcount);
+  void GetEnclosing(const std::string& enclstring, int& new_allele,
+        const int32_t& repcn_a, const int32_t& repcn_b,
+        int* encl_newallele, int* encl_total, int* encl_match);
+  void CalculatePosterior();
 
  private:
   static std::string PERIOD_KEY;
-  void CalculatePosterior();
   std::string family_id_;
   std::string mother_id_;
   std::string father_id_;
@@ -118,9 +121,6 @@ class DenovoResult {
   int pat_gt_a_, pat_gt_b_;
   void GetRepcn(const VCF::Variant& variant, const int32_t& sample_ind,
 		int* repcn_a, int* repcn_b);
-  void GetEnclosing(const std::string& enclstring, int& new_allele,
-		    const int32_t& repcn_a, const int32_t& repcn_b,
-		    int* encl_newallele, int* encl_total, int* encl_match);
 
 
   // New allele info and POO
