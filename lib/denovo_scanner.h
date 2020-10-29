@@ -88,6 +88,9 @@ class DenovoResult {
   int GetTrans(const int& child, const int& p1, const int& p2);
   int GetFlankLargerThan(const std::string flnkstring, const int& allele);
   int GetMaxFlankAllele(const std::string flnkstring); 
+  int GetMutSize(const int& new_allele, const int& a1, const int& a2);
+  int GetMutSize(const int& new_allele, const int& a1, const int& a2, const int& a3, const int& a4);
+  void GetFRR(const std::string& rcstring, int* frrcount);
 
  private:
   static std::string PERIOD_KEY;
@@ -115,12 +118,9 @@ class DenovoResult {
   int pat_gt_a_, pat_gt_b_;
   void GetRepcn(const VCF::Variant& variant, const int32_t& sample_ind,
 		int* repcn_a, int* repcn_b);
-  int GetMutSize(const int& new_allele, const int& a1, const int& a2);
-  int GetMutSize(const int& new_allele, const int& a1, const int& a2, const int& a3, const int& a4);
   void GetEnclosing(const std::string& enclstring, int& new_allele,
 		    const int32_t& repcn_a, const int32_t& repcn_b,
 		    int* encl_newallele, int* encl_total, int* encl_match);
-  void GetFRR(const std::string& rcstring, int* frrcount);
 
 
   // New allele info and POO

@@ -24,12 +24,13 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 
 // TODO fill in tests for these functions
-// DenovoResult::GetRepcn
-// DenovoResult::GetMutSize
 // DenovoResult::GetFRR
 // DenovoResult::GetEnclosing
 // DenovoResult::GetMutationInfo
 // DenovoResult::CalculatePosterior
+
+// TODO Need test input files for these:
+// DenovoResult::GetRepcn
 // TrioDenovoScanner::naive_scan
 // TrioDenovoScanner::scan
 
@@ -85,7 +86,7 @@ TEST(GetMaxFlankAllele, GetMaxFlankAllele) {
 	ASSERT_EQ(dnr.GetMaxFlankAllele(flnkstring), 25);
 
 	flnkstring = "dummystring";
-	ASSERT_DEATH(dnr.GetMaxFlankAllele(flnkstring), "");
+	ASSERT_DEATH(dnr.GetMaxFlankAllele(flnkstring), "Invalid flankstring encountered .*");
 }
 
 TEST(GetFlankLargerThan, GetFlankLargerThan) {
@@ -111,7 +112,7 @@ TEST(GetFlankLargerThan, GetFlankLargerThan) {
 	ASSERT_EQ(dnr.GetFlankLargerThan(flnkstring, 30), 0);
 
 	flnkstring = "dummystring";
-	ASSERT_DEATH(dnr.GetFlankLargerThan(flnkstring, 0), "");
+	ASSERT_DEATH(dnr.GetFlankLargerThan(flnkstring, 0), "Invalid flankstring encountered .*");
 }
 
 
@@ -207,11 +208,48 @@ TEST(TestTransmission, TestTransmission) {
 }
 
 TEST(TestMutSize, TestMutSize) {
-	// Test int DenovoResult::GetMutSize(const int& new_allele, const int& a1, const int& a2)
-
 	// Set up dummy DenovoResult
 	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, 0, 0, -8);
 
+	// Test int GetMutSize(const int& new_allele, const int& a1, const int& a2, const int& a3, const int& a4); (autosome)
+	ASSERT_EQ(dnr.GetMutSize(10, 10, 10, 10, 15), 0);
+	ASSERT_EQ(dnr.GetMutSize(15, 10, 10, 10, 15), 0);
+	ASSERT_EQ(dnr.GetMutSize(11, 10, 10, 10, 15), 1);
+	ASSERT_EQ(dnr.GetMutSize(12, 10, 10, 10, 15), 2);
+	ASSERT_EQ(dnr.GetMutSize(13, 10, 10, 10, 15), -2);
+	ASSERT_EQ(dnr.GetMutSize(14, 10, 10, 10, 15), -1);
+	ASSERT_EQ(dnr.GetMutSize(5, 10, 10, 10, 15), -5);
+	ASSERT_EQ(abs(dnr.GetMutSize(11, 10, 10, 12, 12)), 1);
+
+
+	// Test int DenovoResult::GetMutSize(const int& new_allele, const int& a1, const int& a2) (chrX)
 	ASSERT_EQ(dnr.GetMutSize(10, 10, 15), 0);
+	ASSERT_EQ(dnr.GetMutSize(12, 10, 15), 2);
+	ASSERT_EQ(dnr.GetMutSize(8, 10, 15), -2);
+	ASSERT_EQ(dnr.GetMutSize(16, 10, 15), 1);
+}
+
+TEST(TestGetFRR, TestGetFRR) {
+	// Test DenovoResult::GetFRR(const std::string& rcstring, int* frrcount)
+	// RC string has "(enclosing, spanning, FRR, flanking)"
+
+	// Set up dummy DenovoResult
+	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, 0, 0, -8);
+	int frrcount;
+
+	std::string rcstring = "10,20,30,40";
+	dnr.GetFRR(rcstring, &frrcount);
+	ASSERT_EQ(frrcount, 30);
+
+	rcstring = "10,20,0,10";
+	dnr.GetFRR(rcstring, &frrcount);
+	ASSERT_EQ(frrcount, 0);
+
+	// Try an illegal rcstring
+	rcstring = "";
+	ASSERT_DEATH(dnr.GetFRR(rcstring, &frrcount), "Invalid RC string encountered .*");
+	rcstring = "0,0,";
+	ASSERT_DEATH(dnr.GetFRR(rcstring, &frrcount), "Invalid RC string encountered .*");
 
 }
+

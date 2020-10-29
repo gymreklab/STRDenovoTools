@@ -453,7 +453,9 @@ int DenovoResult::GetMaxFlankAllele(const std::string flnkstring) {
   for (auto item_iter = flnkreads_items.begin(); item_iter != flnkreads_items.end(); item_iter++) {
     items.clear();
     split_by_delim(*item_iter, ',' ,items);
-    assert(items.size()==2);
+    if (items.size() != 2) {
+      PrintMessageDieOnError("Invalid flankstring encountered " + flnkstring, M_ERROR);
+    }
     int a = stoi(items[0]);
     int count = stoi(items[1]);
     if (a > maxallele) {
@@ -473,7 +475,9 @@ int DenovoResult::GetFlankLargerThan(const std::string flnkstring, const int& al
   for (auto item_iter = flnkreads_items.begin(); item_iter != flnkreads_items.end(); item_iter++) {
     items.clear();
     split_by_delim(*item_iter, ',' ,items);
-    assert(items.size()==2);
+    if (items.size() != 2) {
+      PrintMessageDieOnError("Invalid flankstring encountered " + flnkstring, M_ERROR);
+    }
     int a = stoi(items[0]);
     int count = stoi(items[1]);
     if (a > allele) {
@@ -557,6 +561,9 @@ int DenovoResult::GetMutSize(const int& new_allele, const int& a1, const int& a2
 void DenovoResult::GetFRR(const std::string& rcstring, int* frrcount) {
   std::vector<std::string> items;
   split_by_delim(rcstring, ',', items);
+  if (items.size() != 4) {
+    PrintMessageDieOnError("Invalid RC string encountered " + rcstring, M_ERROR);
+  }
   *frrcount = stoi(items[2]);
 }
 
