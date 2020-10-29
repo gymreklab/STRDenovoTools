@@ -75,13 +75,19 @@ class DenovoResult {
   const void set_mat_gt(const std::string& mat_gt) {mat_gt_ = mat_gt;}
   const void set_pat_gt(const std::string& pat_gt) {pat_gt_ = pat_gt;}
 
+  // Additional setters to enable testing
+  const void set_child_gt(const int& child_gt_a, const int& child_gt_b) {child_gt_a_ = child_gt_a; child_gt_b_ = child_gt_b;}
+  const void set_mat_gt(const int& mat_gt_a, const int& mat_gt_b) {mat_gt_a_ = mat_gt_a; mat_gt_b_ = mat_gt_b;}
+  const void set_pat_gt(const int& pat_gt_a, const int& pat_gt_b) {pat_gt_a_ = pat_gt_a; pat_gt_b_ = pat_gt_b;}
+
+
   void GetMutationInfo(const Options& options, const VCF::Variant& variant,
 		       bool* filter_mutation);
   // 0=unknown, 1=shorter, 2=longer
   void TestTransmission(int* long_mother, int* long_father);
   int GetTrans(const int& child, const int& p1, const int& p2);
   int GetFlankLargerThan(const std::string flnkstring, const int& allele);
-  int GetMaxFlankAllele(const std::string flnkstring);
+  int GetMaxFlankAllele(const std::string flnkstring); 
 
  private:
   static std::string PERIOD_KEY;

@@ -25,7 +25,6 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO fill in tests for these functions
 // DenovoResult::GetRepcn
-// DenovoResult::GetTrans
 // DenovoResult::TestTransmission
 // DenovoResult::GetMutSize
 // DenovoResult::GetFRR
@@ -95,6 +94,7 @@ TEST(GetFlankLargerThan, GetFlankLargerThan) {
 	// flnkstring is NULL, or allele1,reads1|allele2,reads2...
 	// Count how many flanks support a count > allele
 
+	// Set up dummy DenovoResult
 	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, 0, 0, -8);
 
 	std::string flnkstring = "NULL";
@@ -113,4 +113,96 @@ TEST(GetFlankLargerThan, GetFlankLargerThan) {
 
 	flnkstring = "dummystring";
 	ASSERT_DEATH(dnr.GetFlankLargerThan(flnkstring, 0), "");
+}
+
+
+TEST(TestTransmission, TestTransmission) {
+	// Test DenovoResult::TestTransmission(int* long_mother, int* long_father)
+	// 0=unknown, 1=shorter, 2=longer
+
+	// Set up dummy DenovoResult
+	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, 0, 0, -8);
+
+	// Set up result variables
+	int long_mother, long_father;
+
+	// Parents homozygous - unknown
+	dnr.set_child_gt(10, 12);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(12, 12);
+	dnr.TestTransmission(&long_mother, &long_father);
+	ASSERT_EQ(long_mother, 0);
+	ASSERT_EQ(long_father, 0);
+
+	// Mother unknown, father long
+	dnr.set_child_gt(10, 12);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(10, 12);
+	dnr.TestTransmission(&long_mother, &long_father);
+	ASSERT_EQ(long_mother, 0);
+	ASSERT_EQ(long_father, 2);
+
+	// Mother unknown, father short
+	dnr.set_child_gt(10, 10);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(10, 12);
+	dnr.TestTransmission(&long_mother, &long_father);
+	ASSERT_EQ(long_mother, 0);
+	ASSERT_EQ(long_father, 1);
+
+	// Mother long, father unknown
+	dnr.set_child_gt(12, 15);
+	dnr.set_mat_gt(10, 15);
+	dnr.set_pat_gt(12, 12);
+	dnr.TestTransmission(&long_mother, &long_father);
+	ASSERT_EQ(long_mother, 2);
+	ASSERT_EQ(long_father, 0);
+
+	// Mother short, father unknown
+	dnr.set_child_gt(12, 10);
+	dnr.set_mat_gt(10, 15);
+	dnr.set_pat_gt(12, 12);
+	dnr.TestTransmission(&long_mother, &long_father);
+	ASSERT_EQ(long_mother, 1);
+	ASSERT_EQ(long_father, 0);
+
+	// Mother long, father long
+	dnr.set_child_gt(12, 15);
+	dnr.set_mat_gt(10, 15);
+	dnr.set_pat_gt(10, 12);
+	dnr.TestTransmission(&long_mother, &long_father);
+	ASSERT_EQ(long_mother, 2);
+	ASSERT_EQ(long_father, 2);
+
+	// Mother long, father short
+	dnr.set_child_gt(15, 10);
+	dnr.set_mat_gt(10, 15);
+	dnr.set_pat_gt(10, 12);
+	dnr.TestTransmission(&long_mother, &long_father);
+	ASSERT_EQ(long_mother, 2);
+	ASSERT_EQ(long_father, 1);
+
+	// Mother short, father long
+	dnr.set_child_gt(10, 12);
+	dnr.set_mat_gt(10, 15);
+	dnr.set_pat_gt(10, 12);
+	dnr.TestTransmission(&long_mother, &long_father);
+	ASSERT_EQ(long_mother, 1);
+	ASSERT_EQ(long_father, 2);
+
+	// Mother short, father short
+	dnr.set_child_gt(10, 10);
+	dnr.set_mat_gt(10, 15);
+	dnr.set_pat_gt(10, 12);
+	dnr.TestTransmission(&long_mother, &long_father);
+	ASSERT_EQ(long_mother, 1);
+	ASSERT_EQ(long_father, 1);
+
+	// Not Mendelian, unknown
+	dnr.set_child_gt(10, 21);
+	dnr.set_mat_gt(10, 15);
+	dnr.set_pat_gt(10, 12);
+	dnr.TestTransmission(&long_mother, &long_father);
+	ASSERT_EQ(long_mother, 0);
+	ASSERT_EQ(long_father, 0);
 }
