@@ -18,19 +18,17 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "lib/denovo_scanner.h"
+#include "lib/vcf_reader.h"
+#include "MonSTRConfig.h"
 
 #include "gtest/gtest.h"
 
 #include <math.h>
+#include <sstream>
 #include <string>
 
-// TODO Need test input VCF files set up for these:
-// DenovoResult::GetRepcn
-// TrioDenovoScanner::naive_scan
-// TrioDenovoScanner::scan
-// DenovoResult::GetMutationInfo
 
-
+// ********* tests below don't rely on reading in test files ***** //
 TEST(GetFollowsMI, GetFollowsMI) {
 	// Test TrioDenovoScanner::GetFollowsMI(mother_a, mother_b, father_a, father_b, child_a, child_b, is_chrx, child_sex)
 
@@ -324,4 +322,99 @@ TEST(TestCalculatePosterior, TestCalculatePosterior) {
 	DenovoResult dnr3("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, total_ll_no_mutation, total_ll_one_denovo, log10prior);
 	dnr3.CalculatePosterior();
 	ASSERT_NEAR(dnr3.get_posterior(), 0.1818, 0.01);
+}
+
+// ********* DenovoScannerTest tests need test files ***** //
+
+class DenovoScannerTest : public ::testing::Test {
+    protected:
+    	void SetUp() override {
+    		std::stringstream ss;
+			ss << SOURCE_DIR << "/TestData/Q3.filtered.vcf.gz";
+			vcffile = ss.str();
+
+			std::stringstream ssped;
+			ssped << SOURCE_DIR << "/TestData/TestQuadFam.ped";
+			pedfile = ss.str();
+    	}
+    std::string vcffile;
+    std::string pedfile;
+};
+
+TEST_F(DenovoScannerTest, GetRepcn) {
+	// DenovoResult::GetRepcn(const VCF::Variant& variant, const int32_t& sample_ind,
+	//			    int* repcn_a, int* repcn_b)
+
+	// Set up dummy DenovoResult
+	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, 0, 0, -8);
+
+	// Set up VCF
+	VCF::VCFReader strvcf(vcffile);
+	VCF::Variant str_variant;
+	int repcn_a, repcn_b;
+
+	// First variant is nocall in all samples
+	strvcf.get_next_variant(&str_variant, true);
+	dnr.GetRepcn(str_variant, 0, &repcn_a, &repcn_b);
+	ASSERT_EQ(repcn_a, -1);
+	ASSERT_EQ(repcn_b, -1);
+
+	// Second variant is period 1. 
+	// All samples should have 18,18
+	strvcf.get_next_variant(&str_variant, true);
+	dnr.GetRepcn(str_variant, 0, &repcn_a, &repcn_b);
+	ASSERT_EQ(repcn_a, 18);
+	ASSERT_EQ(repcn_b, 18);
+
+	dnr.GetRepcn(str_variant, 1, &repcn_a, &repcn_b);
+	ASSERT_EQ(repcn_a, 18);
+	ASSERT_EQ(repcn_b, 18);
+
+	dnr.GetRepcn(str_variant, 2, &repcn_a, &repcn_b);
+	ASSERT_EQ(repcn_a, 18);
+	ASSERT_EQ(repcn_b, 18);
+
+	dnr.GetRepcn(str_variant, 3, &repcn_a, &repcn_b);
+	ASSERT_EQ(repcn_a, 18);
+	ASSERT_EQ(repcn_b, 18);
+
+	// Third variant is period 4
+	// All samples should have 5,5
+	strvcf.get_next_variant(&str_variant, true);
+	dnr.GetRepcn(str_variant, 0, &repcn_a, &repcn_b);
+	ASSERT_EQ(repcn_a, 5);
+	ASSERT_EQ(repcn_b, 5);
+
+	dnr.GetRepcn(str_variant, 1, &repcn_a, &repcn_b);
+	ASSERT_EQ(repcn_a, 5);
+	ASSERT_EQ(repcn_b, 5);
+
+	dnr.GetRepcn(str_variant, 2, &repcn_a, &repcn_b);
+	ASSERT_EQ(repcn_a, 5);
+	ASSERT_EQ(repcn_b, 5);
+
+	dnr.GetRepcn(str_variant, 3, &repcn_a, &repcn_b);
+	ASSERT_EQ(repcn_a, 5);
+	ASSERT_EQ(repcn_b, 5);
+}
+
+TEST_F(DenovoScannerTest, GetMutationInfo) {
+	// TODO - test DenovoResult::GetMutationInfo
+
+	// Set up VCF
+	VCF::VCFReader strvcf(vcffile);
+}
+
+TEST_F(DenovoScannerTest, NaiveScan) {
+	// TODO - test TrioDenovoScanner::naive_scan
+
+	// Set up VCF
+	VCF::VCFReader strvcf(vcffile);
+}
+
+TEST_F(DenovoScannerTest, Scan) {
+	// TODO - test TrioDenovoScanner::scan
+
+	// Set up VCF
+	VCF::VCFReader strvcf(vcffile);
 }

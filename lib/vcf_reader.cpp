@@ -4,7 +4,7 @@ This file is modified from Thomas Willems's HipSTR: https://github.com/tfwillems
 
 
 #include <set>
-
+#include <fstream>
 #include <math.h>
 #include <sys/stat.h>
 
@@ -257,6 +257,11 @@ namespace VCF {
   void VCFReader::open(const std::string& filename){
     const char* cfilename = filename.c_str();
     
+    std::ifstream checkfile(cfilename);
+    if (!checkfile.good()) {
+      PrintMessageDieOnError("VCF file could not be opened " + filename, M_ERROR);
+    }
+
     if (bgzf_is_bgzf(cfilename) != 1)
       PrintMessageDieOnError("VCF file is not in a valid bgzipped file. Please ensure that bgzip was used to compress it", M_ERROR);
   

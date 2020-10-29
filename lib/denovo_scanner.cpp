@@ -436,6 +436,14 @@ void TrioDenovoScanner::scan(VCF::VCFReader& strvcf,
 
 void DenovoResult::GetRepcn(const VCF::Variant& variant, const int32_t& sample_ind,
 			    int* repcn_a, int* repcn_b) {
+  if (variant.sample_call_missing(sample_ind)) {
+    // Return -1, -1 if the variant not called. This shouldn't happen
+    // since we check for no call earlier
+    PrintMessageDieOnError("Encountered unexpected missing genotype in GetRepcn", M_WARNING);
+    *repcn_a = -1;
+    *repcn_b = -1;
+    return;
+  }
   int32_t period; variant.get_INFO_value_single_int(PERIOD_KEY, period);
   int gt_a, gt_b;
   variant.get_genotype(sample_ind, gt_a, gt_b);

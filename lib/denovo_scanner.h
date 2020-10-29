@@ -95,6 +95,8 @@ class DenovoResult {
         const int32_t& repcn_a, const int32_t& repcn_b,
         int* encl_newallele, int* encl_total, int* encl_match);
   void CalculatePosterior();
+  void GetRepcn(const VCF::Variant& variant, const int32_t& sample_ind,
+    int* repcn_a, int* repcn_b);
 
  private:
   static std::string PERIOD_KEY;
@@ -119,9 +121,6 @@ class DenovoResult {
   int child_gt_a_, child_gt_b_;
   int mat_gt_a_, mat_gt_b_;
   int pat_gt_a_, pat_gt_b_;
-  void GetRepcn(const VCF::Variant& variant, const int32_t& sample_ind,
-		int* repcn_a, int* repcn_b);
-
 
   // New allele info and POO
   int new_allele_ = 0;
