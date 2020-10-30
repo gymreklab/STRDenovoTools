@@ -101,7 +101,13 @@ class DenovoResult {
   bool GetPOOMutationInfo(const bool& chrX);
   bool CheckReadFilters(const Options& options, const VCF::Variant& variant);
   bool NaiveExpansionDetection(const Options& options, const VCF::Variant& variant);
-
+  bool vcfinfo_set_ = false; // did we set VCF information yet?
+  // New allele info and POO
+  int new_allele_ = 0;
+  int mut_size_ = 0;
+  int poocase_ = 0;
+  bool new_allele_in_parents_ = false;
+  
  private:
   static std::string PERIOD_KEY;
   std::string family_id_;
@@ -118,7 +124,6 @@ class DenovoResult {
   double posterior_;
   double log10_prior_mutation_;
 
-  bool vcfinfo_set_ = false; // did we set VCF information yet?
 
   // Genotype info
   std::string child_gt_;
@@ -128,11 +133,7 @@ class DenovoResult {
   int mat_gt_a_, mat_gt_b_;
   int pat_gt_a_, pat_gt_b_;
 
-  // New allele info and POO
-  int new_allele_ = 0;
-  int mut_size_ = 0;
-  int poocase_ = 0;
-  bool new_allele_in_parents_ = false;
+
 
   // Enclosing read info
   int encl_reads_child_ = 0; // num encl reads matching new allele in child

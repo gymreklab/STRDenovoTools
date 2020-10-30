@@ -30,9 +30,231 @@ along with STRDenovoTools.  If not, see <http://www.gnu.org/licenses/>.
 
 // ********* tests below don't rely on reading in test files ***** //
 
-// TODO bool DenovoResult::GetPOOMutationInfo(const bool& chrX) {
-// TODO bool DenovoResult::CheckReadFilters(const Options& options, const VCF::Variant& variant);
-// TODO bool DenovoResult::NaiveExpansionDetection(const Options& options, const VCF::Variant& variant) 
+
+/*
+  Sets:
+   new_allele_
+   mut_size_
+   poocase_
+   new_allele_in_parents_
+
+  Returns false if Mendelian, true otherwise
+
+      poocase: describes inheritance pattern
+    0: unknown
+    1: Mendelian (no denovo)
+    2: New allele from father
+    3: New allele from mother
+    4: Unclear
+*/
+TEST(GetPOOMutationInfo, GetPOOMutationInfo) {
+	// Test bool DenovoResult::GetPOOMutationInfo(const bool& chrX)
+
+	// Set up dummy DenovoResult
+	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, 0, 0, -8);
+
+	// If no vcf info loaded, should die
+	ASSERT_DEATH(dnr.GetPOOMutationInfo(false), "Can't run GetPOOMutationInfo before setting VCF info");
+
+	// Now, artificially load some info 
+	dnr.vcfinfo_set_ = true;
+
+	/******** Autosomal ********/
+
+	// Mendelian (case 1)
+	dnr.set_child_gt(10, 12);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(12, 12);
+	ASSERT_FALSE(dnr.GetPOOMutationInfo(false));
+	ASSERT_EQ(dnr.poocase_, 1);
+
+	// Mutation from dad (case 2)
+	dnr.set_child_gt(10, 10);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(12, 12);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(false));
+	ASSERT_EQ(dnr.new_allele_, 10);
+	ASSERT_EQ(dnr.mut_size_, -2);
+	ASSERT_EQ(dnr.poocase_, 2);
+	ASSERT_TRUE(dnr.new_allele_in_parents_);
+
+	dnr.set_child_gt(15, 10);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(12, 12);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(false));
+	ASSERT_EQ(dnr.new_allele_, 15);
+	ASSERT_EQ(dnr.mut_size_, 3);
+	ASSERT_EQ(dnr.poocase_, 2);
+	ASSERT_FALSE(dnr.new_allele_in_parents_);
+
+	// Mutation from mom (case 3)
+	dnr.set_child_gt(12, 12);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(12, 12);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(false));
+	ASSERT_EQ(dnr.new_allele_, 12);
+	ASSERT_EQ(dnr.mut_size_, 2);
+	ASSERT_EQ(dnr.poocase_, 3);
+	ASSERT_TRUE(dnr.new_allele_in_parents_);
+
+	dnr.set_child_gt(15, 12);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(12, 12);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(false));
+	ASSERT_EQ(dnr.new_allele_, 15);
+	ASSERT_EQ(dnr.mut_size_, 5);
+	ASSERT_EQ(dnr.poocase_, 3);
+	ASSERT_FALSE(dnr.new_allele_in_parents_);
+
+	// Mutation not clear (case 4)
+	dnr.set_child_gt(10, 15);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(10, 10);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(false));
+	ASSERT_EQ(dnr.new_allele_, 15);
+	ASSERT_EQ(dnr.mut_size_, 5);
+	ASSERT_EQ(dnr.poocase_, 4);
+	ASSERT_FALSE(dnr.new_allele_in_parents_);
+
+	dnr.set_child_gt(10, 15);
+	dnr.set_mat_gt(10, 12);
+	dnr.set_pat_gt(10, 12);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(false));
+	ASSERT_EQ(dnr.new_allele_, 15);
+	ASSERT_EQ(dnr.mut_size_, 3);
+	ASSERT_EQ(dnr.poocase_, 4);
+	ASSERT_FALSE(dnr.new_allele_in_parents_);
+
+	dnr.set_child_gt(12, 15);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(10, 10);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(false));
+	ASSERT_TRUE(dnr.new_allele_ == 15 | dnr.new_allele_ == 12);
+	ASSERT_TRUE(dnr.mut_size_ == 5 | dnr.mut_size_ == 2);
+	ASSERT_EQ(dnr.poocase_, 4);
+	ASSERT_FALSE(dnr.new_allele_in_parents_);
+
+	/******** ChrX - male ********/
+
+	// Set up dummy DenovoResult
+	DenovoResult dnr_male("family", "mother", "father", "chid", 1, SEX_MALE, 0, 0, 0, 0, 0, -8);
+	dnr_male.vcfinfo_set_ = true;
+
+	// Mendelian (case 1)
+	dnr_male.set_child_gt(10, 10);
+	dnr_male.set_mat_gt(10, 10);
+	dnr_male.set_pat_gt(12, 12);
+	ASSERT_FALSE(dnr_male.GetPOOMutationInfo(true));
+	ASSERT_EQ(dnr_male.poocase_, 1);
+
+	// Mendelian (case 1)
+	dnr_male.set_child_gt(15, 15);
+	dnr_male.set_mat_gt(10, 15);
+	dnr_male.set_pat_gt(12, 12);
+	ASSERT_FALSE(dnr_male.GetPOOMutationInfo(true));
+	ASSERT_EQ(dnr_male.poocase_, 1);
+
+	// Mutation
+	dnr_male.set_child_gt(12, 12);
+	dnr_male.set_mat_gt(10, 10);
+	dnr_male.set_pat_gt(12, 12);
+	ASSERT_TRUE(dnr_male.GetPOOMutationInfo(true));
+	ASSERT_EQ(dnr_male.poocase_, 3);
+	ASSERT_EQ(dnr_male.new_allele_, 12);
+	ASSERT_EQ(dnr_male.mut_size_, 2);
+	ASSERT_FALSE(dnr_male.new_allele_in_parents_);
+
+	dnr_male.set_child_gt(12, 12);
+	dnr_male.set_mat_gt(10, 13);
+	dnr_male.set_pat_gt(12, 12);
+	ASSERT_TRUE(dnr_male.GetPOOMutationInfo(true));
+	ASSERT_EQ(dnr_male.poocase_, 3);
+	ASSERT_EQ(dnr_male.new_allele_, 12);
+	ASSERT_EQ(dnr_male.mut_size_, -1);
+	ASSERT_FALSE(dnr_male.new_allele_in_parents_);
+
+	/******** ChrX - female ********/
+	// Mendelian (case 1)
+	dnr.set_child_gt(10, 12);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(12, 12);
+	ASSERT_FALSE(dnr.GetPOOMutationInfo(true));
+	ASSERT_EQ(dnr.poocase_, 1);
+
+	// Mutation from dad (case 2)
+	dnr.set_child_gt(10, 10);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(12, 12);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(true));
+	ASSERT_EQ(dnr.new_allele_, 10);
+	ASSERT_EQ(dnr.mut_size_, -2);
+	ASSERT_EQ(dnr.poocase_, 2);
+	ASSERT_TRUE(dnr.new_allele_in_parents_);
+
+	dnr.set_child_gt(15, 10);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(12, 12);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(true));
+	ASSERT_EQ(dnr.new_allele_, 15);
+	ASSERT_EQ(dnr.mut_size_, 3);
+	ASSERT_EQ(dnr.poocase_, 2);
+	ASSERT_FALSE(dnr.new_allele_in_parents_);
+
+	// Mutation from mom (case 3)
+	dnr.set_child_gt(12, 12);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(12, 12);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(true));
+	ASSERT_EQ(dnr.new_allele_, 12);
+	ASSERT_EQ(dnr.mut_size_, 2);
+	ASSERT_EQ(dnr.poocase_, 3);
+	ASSERT_TRUE(dnr.new_allele_in_parents_);
+
+	dnr.set_child_gt(15, 12);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(12, 12);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(true));
+	ASSERT_EQ(dnr.new_allele_, 15);
+	ASSERT_EQ(dnr.mut_size_, 5);
+	ASSERT_EQ(dnr.poocase_, 3);
+	ASSERT_FALSE(dnr.new_allele_in_parents_);
+
+	// Mutation not clear (case 4)
+	dnr.set_child_gt(10, 15);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(10, 10);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(true));
+	ASSERT_EQ(dnr.new_allele_, 15);
+	ASSERT_EQ(dnr.mut_size_, 5);
+	ASSERT_EQ(dnr.poocase_, 4);
+	ASSERT_FALSE(dnr.new_allele_in_parents_);
+
+	dnr.set_child_gt(10, 15);
+	dnr.set_mat_gt(10, 12);
+	dnr.set_pat_gt(10, 10);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(true));
+	ASSERT_EQ(dnr.new_allele_, 15);
+	ASSERT_EQ(dnr.mut_size_, 3);
+	ASSERT_EQ(dnr.poocase_, 4);
+	ASSERT_FALSE(dnr.new_allele_in_parents_);
+
+	dnr.set_child_gt(12, 15);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(10, 10);
+	ASSERT_TRUE(dnr.GetPOOMutationInfo(true));
+	ASSERT_TRUE(dnr.new_allele_ == 15 | dnr.new_allele_ == 12);
+	ASSERT_TRUE(dnr.mut_size_ == 5 | dnr.mut_size_ == 2);
+	ASSERT_EQ(dnr.poocase_, 4);
+	ASSERT_FALSE(dnr.new_allele_in_parents_);
+}
+
+TEST(CheckReadFilters, CheckReadFilters) {
+	// TODO bool DenovoResult::CheckReadFilters(const Options& options, const VCF::Variant& variant);
+}
+
+TEST(NaiveExpansionDetection, NaiveExpansionDetection) {
+	// TODO bool DenovoResult::NaiveExpansionDetection(const Options& options, const VCF::Variant& variant) 
+}
 
 TEST(GetFollowsMI, GetFollowsMI) {
 	// Test TrioDenovoScanner::GetFollowsMI(mother_a, mother_b, father_a, father_b, child_a, child_b, is_chrx, child_sex)

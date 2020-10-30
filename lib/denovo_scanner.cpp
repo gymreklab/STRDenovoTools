@@ -630,7 +630,9 @@ bool DenovoResult::GetPOOMutationInfo(const bool& chrX) {
   }
 
   new_allele_ = 0;
+  mut_size_ = 0;
   poocase_ = 0; // 1=Mendelian 2=new allele from father, 3=new allele from mother, 4=not in anyone
+  new_allele_in_parents_ = false;
 
   if (chrX && child_sex_ == SEX_MALE) {
     // Case 1: Mendelian
@@ -640,23 +642,12 @@ bool DenovoResult::GetPOOMutationInfo(const bool& chrX) {
       new_allele_ = 0;
       mut_size_ = 0;
       return false;
-    }
-    // Case 3: New allele from mother
-    // Allele a not in mother
-    if ((child_gt_a_ != mat_gt_a_ && child_gt_a_ != mat_gt_b_)) {
+    } else { // Case 3: New allele (only check a) from mother
       new_allele_ = child_gt_a_;
       poocase_ = 3;
       mut_size_ = GetMutSize(new_allele_, mat_gt_a_, mat_gt_b_);
     }
-    // Case 4: new allele not in either parent at all and we haven't figured it out yet
-    if (poocase_ == 0 && child_gt_a_ != mat_gt_a_  && child_gt_a_ != mat_gt_b_) {
-      new_allele_ = child_gt_a_;
-      poocase_ = 4;
-      mut_size_ = GetMutSize(new_allele_, mat_gt_a_ , mat_gt_b_);
-    }
-    if (new_allele_ == mat_gt_a_  || new_allele_ == mat_gt_b_) {
-      new_allele_in_parents_ = true;
-    }
+    return true;
   }
   else {
     // Case 1: Mendelian
@@ -728,8 +719,8 @@ bool DenovoResult::GetPOOMutationInfo(const bool& chrX) {
         new_allele_ == pat_gt_a_ || new_allele_ == pat_gt_b_) {
       new_allele_in_parents_ = true;
     }
+    return true;
   }
-  return true;
 }
 
 /*
