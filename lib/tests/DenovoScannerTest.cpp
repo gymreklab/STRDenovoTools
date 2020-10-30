@@ -249,11 +249,60 @@ TEST(GetPOOMutationInfo, GetPOOMutationInfo) {
 }
 
 TEST(CheckReadFilters, CheckReadFilters) {
-	// TODO bool DenovoResult::CheckReadFilters(const Options& options, const VCF::Variant& variant);
+	// Test bool DenovoResult::CheckReadFilters(const Options& options);
+
+	// Set up dummy DenovoResult
+	DenovoResult dnr("family", "mother", "father", "chid", 1, SEX_FEMALE, 0, 0, 0, 0, 0, -8);
+
+	// Should die if we haven't updated info yet
+	Options options;
+	ASSERT_DEATH(dnr.CheckReadFilters(options), "CheckReadFilters can't be called until vcfinfo_set_, mutinfo_set_ and vcfinfo_updated_ are true");
+
+	// Update vcf info
+	dnr.vcfinfo_set_ = true;
+	dnr.set_child_gt(12, 12);
+	dnr.set_mat_gt(10, 10);
+	dnr.set_pat_gt(10, 10);
+
+	// Update read info for checkreadfilters
+	dnr.vcfinfo_updated_ = true;
+	dnr.encl_reads_child_ = 10;
+	dnr.encl_reads_mother_ = 0;
+	dnr.encl_reads_father_ = 0;
+	dnr.encl_reads_parent_ = 0;
+	dnr.total_encl_child_ = 15;
+	dnr.total_encl_mother_ = 15;
+	dnr.total_encl_father_ = 15;
+	dnr.total_encl_parent_ = 15;
+	dnr.match_encl_child_ = 15;
+	dnr.match_encl_mother_ = 15;
+	dnr.match_encl_father_ = 15;
+	dnr.frr_child_ = 0;
+	dnr.frr_mother_ = 0;
+	dnr.frr_father_ = 0;
+    dnr.max_parent_allele_ = 10;
+    dnr.num_large_child_flank_ = 0;
+    options.chrX = false;
+    options.filter_hom = true;
+
+    // Should still fail
+	ASSERT_DEATH(dnr.CheckReadFilters(options), "CheckReadFilters can't be called until vcfinfo_set_, mutinfo_set_ and vcfinfo_updated_ are true");
+
+	// Now infer mutation info and it should work
+    dnr.GetPOOMutationInfo(options.chrX);
+    ASSERT_FALSE(dnr.CheckReadFilters(options));
+    options.filter_hom = false;
+    ASSERT_TRUE(dnr.CheckReadFilters(options));
+
+    // Test low coverage
+    options.min_total_encl = 20;
+    ASSERT_FALSE(dnr.CheckReadFilters(options));
+
+    // TODO: test messy, child encl new allele, parent encl new allele
 }
 
 TEST(NaiveExpansionDetection, NaiveExpansionDetection) {
-	// TODO bool DenovoResult::NaiveExpansionDetection(const Options& options, const VCF::Variant& variant) 
+	// TODO bool NaiveExpansionDetection(const Options& options);
 }
 
 TEST(GetFollowsMI, GetFollowsMI) {
@@ -627,14 +676,12 @@ TEST_F(DenovoScannerTest, GetRepcn) {
 
 TEST_F(DenovoScannerTest, NaiveScan) {
 	// TODO - test TrioDenovoScanner::naive_scan
-
 	// Set up VCF
 	VCF::VCFReader strvcf(vcffile);
 }
 
 TEST_F(DenovoScannerTest, Scan) {
 	// TODO - test TrioDenovoScanner::scan
-
 	// Set up VCF
 	VCF::VCFReader strvcf(vcffile);
 }

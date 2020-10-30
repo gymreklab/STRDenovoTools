@@ -634,6 +634,8 @@ bool DenovoResult::GetPOOMutationInfo(const bool& chrX) {
   poocase_ = 0; // 1=Mendelian 2=new allele from father, 3=new allele from mother, 4=not in anyone
   new_allele_in_parents_ = false;
 
+  mutinfo_set_ = true;
+
   if (chrX && child_sex_ == SEX_MALE) {
     // Case 1: Mendelian
     if ((child_gt_a_ == mat_gt_a_ || child_gt_a_  == mat_gt_b_)) {
@@ -743,72 +745,138 @@ void DenovoResult::SetVCFInfo(const VCF::Variant& variant) {
 }
 
 /*
-  Check read filters
+  Update extracted info from VCF file after we've determined the new allele
 
-  Return true if passing, else false
+  Update:
+    - Enclosing read info
+       encl_reads_child_
+       encl_reads_mother_
+       encl_reads_father_
+       encl_reads_parent_
+       total_encl_child_
+       total_encl_mother_
+       total_encl_father_
+       total_encl_parent_
+       match_encl_child_
+       match_encl_mother_
+       match_encl_father_
+    - FRR read info
+       frr_child_
+       frr_mother_
+       frr_father_
+    - Other read info
+       max_parent_allele_
+       num_large_child_flank_
 */
-bool DenovoResult::CheckReadFilters(const Options& options, const VCF::Variant& variant) {
-  if (!vcfinfo_set_) {
-    SetVCFInfo(variant);
-  }
-  // *** Get enclosing read info to set filter *** //
+void DenovoResult::UpdateVCFInfo(const VCF::Variant& variant) {
   std::vector<std::string> enclreads;
   variant.get_FORMAT_value_single_string(ENCLREADS_KEY, enclreads);
   int encl_child, total_encl_child, child_encl_match;
   int encl_mother, total_encl_mother, mother_encl_match;
   int encl_father, total_encl_father, father_encl_match;
-  float encl_reads_perc_parent = 0;;
 
   GetEnclosing(enclreads[child_ind_], new_allele_, child_gt_a_, child_gt_b_, &encl_child, &total_encl_child, &child_encl_match);
   GetEnclosing(enclreads[mother_ind_], new_allele_, mat_gt_a_, mat_gt_b_, &encl_mother, &total_encl_mother, &mother_encl_match);
   GetEnclosing(enclreads[father_ind_], new_allele_, pat_gt_a_, pat_gt_b_, &encl_father, &total_encl_father, &father_encl_match);
 
-  // Set in dnr_iter
+  // Set in dnr
   encl_reads_child_ = encl_child;
   encl_reads_mother_ = encl_mother;
   encl_reads_father_ = encl_father;
+  total_encl_child_ = total_encl_child;
+  total_encl_mother_ = total_encl_mother;
+  total_encl_father_ = total_encl_father;
+  match_encl_child_ = child_encl_match;
+  match_encl_mother_ = mother_encl_match;
+  match_encl_father_ = father_encl_match;
 
+  // Set parent info
   if (poocase_ == 2) {
     encl_reads_parent_ = encl_reads_father_;
-    encl_reads_perc_parent = (float)encl_father/(float)total_encl_father;
+    total_encl_parent_ = total_encl_father;
   } else if (poocase_ == 3) {
     encl_reads_parent_ = encl_reads_mother_;
-    encl_reads_perc_parent = (float)encl_mother/(float)total_encl_mother;
+    total_encl_parent_ = total_encl_mother_;
   } else {
     if (encl_reads_father_ > encl_reads_mother_) {
       encl_reads_parent_ = encl_reads_father_;
-      encl_reads_perc_parent = (float)encl_father/(float)total_encl_father;
+      total_encl_parent_ = total_encl_father;
     } else {
       encl_reads_parent_ = encl_reads_mother_;
-      encl_reads_perc_parent = (float)encl_mother/(float)total_encl_mother;
+      total_encl_parent_ = total_encl_mother;
     }
   }
 
+  // Extract number of FRRs from RC field and FLNKREADS field
+  // Get FRR info
+  std::vector<std::string> readcounts;
+  variant.get_FORMAT_value_single_string(RC_KEY, readcounts);
+  std::vector<std::string> flnkreads;
+  variant.get_FORMAT_value_single_string(FLNKREADS_KEY, flnkreads);
+
+  int frr_child, frr_mother, frr_father;
+  GetFRR(readcounts[child_ind_], &frr_child);
+  GetFRR(readcounts[mother_ind_], &frr_mother);
+  GetFRR(readcounts[father_ind_], &frr_father);
+
+  // Set in dnr
+  frr_child_ = frr_child;
+  frr_mother_ = frr_mother;
+  frr_father_ = frr_father;
+
+  // Get max parent allele size either in flanks or enclosing
+  max_parent_allele_ = std::max(std::max(GetMaxFlankAllele(enclreads[mother_ind_]), GetMaxFlankAllele(enclreads[father_ind_])),
+           std::max(GetMaxFlankAllele(flnkreads[mother_ind_]), GetMaxFlankAllele(flnkreads[father_ind_])));
+  // Then get num child flank reads > max parent allele size
+  num_large_child_flank_ = GetFlankLargerThan(flnkreads[child_ind_], max_parent_allele_);
+
+  vcfinfo_updated_ = true;
+}
+
+/*
+  Check read filters
+
+  Return true if passing, else false
+*/
+bool DenovoResult::CheckReadFilters(const Options& options) {
+  if (!(vcfinfo_set_ & mutinfo_set_ & vcfinfo_updated_)) {
+    PrintMessageDieOnError("CheckReadFilters can't be called until vcfinfo_set_, mutinfo_set_ and vcfinfo_updated_ are true", M_ERROR);
+  }
+
+  // Check if child homozygous for new allele
+  if ((child_gt_a_ == new_allele_) && (child_gt_b_ == new_allele_) && options.filter_hom && !(child_sex_ == SEX_MALE && options.chrX)) {
+      return false;
+  }
+
+  // *** Check enclosing *** //
   // Total enclosing
-  if ((total_encl_child < options.min_total_encl) ||
-      (total_encl_mother < options.min_total_encl) ||
-      (total_encl_father < options.min_total_encl)) {
+  if ((total_encl_child_ < options.min_total_encl) ||
+      (total_encl_mother_ < options.min_total_encl) ||
+      (total_encl_father_ < options.min_total_encl)) {
     if (options.debug) {cerr << "reject based on total enclosing reads" << endl;}
-    return false;
-  }
-  // Messiness
-  if (((float)child_encl_match/(float)total_encl_child < options.min_encl_match) ||
-      ((float)mother_encl_match/(float)total_encl_mother < options.min_encl_match) ||
-      ((float)father_encl_match/(float)total_encl_father < options.min_encl_match)) {
-    if (options.debug) {cerr << "reject based on messy enclosing reads" << endl;}
-    return false;
-  }
-  // Enclosing matching new allele
-  if (encl_child < options.min_num_encl_child) {
-    if (options.debug) {cerr << "reject based on child encl: " << encl_child << endl;}
     return false;
   }
   if (encl_reads_parent_ > options.max_num_encl_parent) {
     if (options.debug) {cerr << "reject based on num encl in parents" << endl;}
     return false;
   }
+
+  // Percent enclosing in parents
+  float encl_reads_perc_parent = (float)encl_reads_parent_/(float)total_encl_parent_;
   if (encl_reads_perc_parent > options.max_perc_encl_parent) {
     if (options.debug) {cerr << "reject based on perc encl in parents" << endl;}
+    return false;
+  }
+  // Enclosing matching new allele
+  if (encl_reads_child_ < options.min_num_encl_child) {
+    if (options.debug) {cerr << "reject based on child encl: " << encl_reads_child_ << endl;}
+    return false;
+  }
+  // Messiness
+  if (((float)match_encl_child_/(float)total_encl_child_< options.min_encl_match) ||
+      ((float)match_encl_mother_/(float)total_encl_mother_ < options.min_encl_match) ||
+      ((float)match_encl_father_/(float)total_encl_father_ < options.min_encl_match)) {
+    if (options.debug) {cerr << "reject based on messy enclosing reads" << endl;}
     return false;
   }
   return true;
@@ -817,49 +885,29 @@ bool DenovoResult::CheckReadFilters(const Options& options, const VCF::Variant& 
 /*
   Apply naive expansion detection
   Return false if no expansion or filtered
+  Set posterior to -1 for candidate expansions
 */
-bool DenovoResult::NaiveExpansionDetection(const Options& options, const VCF::Variant& variant) {
-  // Extract enclosing
-  std::vector<std::string> enclreads;
-  variant.get_FORMAT_value_single_string(ENCLREADS_KEY, enclreads);
-  int encl_child, total_encl_child, child_encl_match;
-  int encl_mother, total_encl_mother, mother_encl_match;
-  int encl_father, total_encl_father, father_encl_match;
-  float encl_reads_perc_parent = 0;;
+bool DenovoResult::NaiveExpansionDetection(const Options& options) {
+  if (!(vcfinfo_set_ & mutinfo_set_ & vcfinfo_updated_)) {
+    PrintMessageDieOnError("NaiveExpansionDetection can't be called until vcfinfo_set_, mutinfo_set_ and vcfinfo_updated_ are true", M_ERROR);
+  }
 
-  GetEnclosing(enclreads[child_ind_], new_allele_, child_gt_a_, child_gt_b_, &encl_child, &total_encl_child, &child_encl_match);
-  GetEnclosing(enclreads[mother_ind_], new_allele_, mat_gt_a_, mat_gt_b_, &encl_mother, &total_encl_mother, &mother_encl_match);
-  GetEnclosing(enclreads[father_ind_], new_allele_, pat_gt_a_, pat_gt_b_, &encl_father, &total_encl_father, &father_encl_match);
-
-  // Extract number of FRRs from RC field and FLNKREADS field
-  std::vector<std::string> readcounts, flnkreads;
-  variant.get_FORMAT_value_single_string(RC_KEY, readcounts);
-  variant.get_FORMAT_value_single_string(FLNKREADS_KEY, flnkreads);
-  int frr_child, frr_mother, frr_father;
-  GetFRR(readcounts[child_ind_], &frr_child);
-  GetFRR(readcounts[mother_ind_], &frr_mother);
-  GetFRR(readcounts[father_ind_], &frr_father);
+  float expansion_posterior = -1; // NOTE: this is a dummy placeholder so we flag candidate expansions
 
   // First, if we see no enclosing reads at all that is a bad sign and we should just quit.
   // Note this might not be always desirable
-  if (enclreads[child_ind_] == "NULL" && enclreads[mother_ind_] == "NULL" && enclreads[father_ind_] == "NULL") {
+  if (total_encl_child_+total_encl_mother_+total_encl_father_==0) {
     return false;
   }
   // Test if child has many FRRs with none in parents
-  int max_parent_frr = 0; // TODO make an option?
-  if (frr_mother <= max_parent_frr && frr_father <= max_parent_frr && frr_child >= options.min_exp_frr) {
-    posterior_ = -1; // TODO for now, so we can easily find
+  if (frr_mother_ <= options.max_parent_frr && frr_father_ <= options.max_parent_frr && frr_child_ >= options.min_exp_frr) {
+    posterior_ = expansion_posterior;
     return true;
   }
 
   // *** Apply naive expansion detection - second looking at flanks *** //
-  // First get max parent allele size either in flanks or enclosing
-  int max_parent_allele = std::max(std::max(GetMaxFlankAllele(enclreads[mother_ind_]), GetMaxFlankAllele(enclreads[father_ind_])),
-           std::max(GetMaxFlankAllele(flnkreads[mother_ind_]), GetMaxFlankAllele(flnkreads[father_ind_])));
-  // Then get num child flank reads > max parent allele size
-  int num_large_child_flank = GetFlankLargerThan(flnkreads[child_ind_], max_parent_allele);
-  if (num_large_child_flank >= options.min_exp_flnk) {
-    posterior_ = -1; // TODO for now, so we can easily find
+  if (num_large_child_flank_ >= options.min_exp_flnk) {
+    posterior_ = expansion_posterior;
     return true;
   }
   return false;
@@ -884,13 +932,9 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
     return; // Mendelian
   }
 
-
   // *** Check if we should filter *** //
-  if ((child_gt_a_ == new_allele_) && (child_gt_b_ == new_allele_) & options.filter_hom) {
-      *filter_mutation = true;
-      return;
-  }
-  if (!CheckReadFilters(options, variant)) {
+  UpdateVCFInfo(variant);
+  if (!CheckReadFilters(options)) {
     *filter_mutation = true;
     return;
   }
@@ -899,9 +943,9 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
   if (!filter_mutation) {return;}
 
   // *** Apply naive expansion detection - first looking at FRR *** //
-  // If not, and we didn't return yet, we're doing expansion detection.
+  // If it didn't pass, and we didn't return yet, we're doing expansion detection.
   if (!options.naive_expansion_detection) {return;}
-  if (!NaiveExpansionDetection(options, variant)) {
+  if (!NaiveExpansionDetection(options)) {
     *filter_mutation = true;
     return;
   }

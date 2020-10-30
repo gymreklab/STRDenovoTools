@@ -84,6 +84,7 @@ class Options {
   int min_total_encl;
   bool filter_hom;
   bool naive_expansion_detection;
+  int max_parent_frr;
   int min_exp_frr;
   int min_exp_flnk;
   bool chrX;

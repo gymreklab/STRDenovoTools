@@ -99,15 +99,46 @@ class DenovoResult {
     int* repcn_a, int* repcn_b);
   void SetVCFInfo(const VCF::Variant& variant);
   bool GetPOOMutationInfo(const bool& chrX);
-  bool CheckReadFilters(const Options& options, const VCF::Variant& variant);
-  bool NaiveExpansionDetection(const Options& options, const VCF::Variant& variant);
+  bool CheckReadFilters(const Options& options);
+  bool NaiveExpansionDetection(const Options& options);
+  void UpdateVCFInfo(const VCF::Variant& variant);
+
   bool vcfinfo_set_ = false; // did we set VCF information yet?
+  bool mutinfo_set_ = false; // did we set Poo/newallele info?
+  bool vcfinfo_updated_ = false; // did we update VCF read info after inferring the new allele?
+
   // New allele info and POO
   int new_allele_ = 0;
   int mut_size_ = 0;
   int poocase_ = 0;
   bool new_allele_in_parents_ = false;
-  
+
+  // Enclosing read info - supporting new allele
+  int encl_reads_child_ = 0; // num encl reads matching new allele in child
+  int encl_reads_mother_ = 0;
+  int encl_reads_father_ = 0;
+  int encl_reads_parent_ = 0 ; // num in parent the allele was inherited from
+
+  // Total enclosing reads
+  int total_encl_child_ = 0;
+  int total_encl_mother_ = 0;
+  int total_encl_father_ = 0;
+  int total_encl_parent_ = 0;
+
+  // Enclosing reads matching call
+  int match_encl_child_ = 0;
+  int match_encl_mother_ = 0;
+  int match_encl_father_ = 0;
+
+  // Num FRRs
+  int frr_child_ = 0;
+  int frr_mother_ = 0;
+  int frr_father_ = 0;
+
+  // Other read info
+  int max_parent_allele_ = 0;
+  int num_large_child_flank_ = 0;
+
  private:
   static std::string PERIOD_KEY;
   std::string family_id_;
@@ -135,11 +166,7 @@ class DenovoResult {
 
 
 
-  // Enclosing read info
-  int encl_reads_child_ = 0; // num encl reads matching new allele in child
-  int encl_reads_parent_ = 0 ; // num in parent the allele was inherited from
-  int encl_reads_mother_ = 0;
-  int encl_reads_father_ = 0;
+
 };
 
 class TrioDenovoScanner {
