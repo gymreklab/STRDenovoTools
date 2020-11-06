@@ -932,6 +932,10 @@ void DenovoResult::GetMutationInfo(const Options& options, const VCF::Variant& v
     return; // Mendelian
   }
 
+  // TODO set up similar filters for HipSTR.
+  // Below only applies to gangstr
+  if (!options.gangstr) return;
+
   // *** Check if we should filter *** //
   UpdateVCFInfo(variant);
   if (!CheckReadFilters(options)) {
@@ -1004,6 +1008,7 @@ void TrioDenovoScanner::summarize_results(std::vector<DenovoResult>& dnr,
     if (dnr_iter->get_poocase() > 1) {
       // Compare to rest of samples
       int new_allele_gb = dnr_iter->get_new_allele()*period - ref_allele_size;
+      if (options_.debug) PrintMessageDieOnError("Getting allele count...", M_PROGRESS);
       locus_inspector.GetAlleleCountByPhenotype(str_variant, pedigree_set_.get_families(),
 						new_allele_gb, &count_control, &count_case, &count_unknown,
 						options_.combine_alleles);
