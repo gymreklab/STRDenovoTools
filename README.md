@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.com/gymreklab/STRDenovoTools.svg?branch=master)](https://travis-ci.com/gymreklab/STRDenovoTools)
+[![DOI](https://zenodo.org/badge/99939401.svg)](https://zenodo.org/badge/latestdoi/99939401)
 
 # MonSTR
 
