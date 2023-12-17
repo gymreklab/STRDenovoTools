@@ -14,7 +14,7 @@ def main():
     parser.add_argument("--filter-denovos-child",         type=int,   required=False,  dest="CHILD_THRESH",         default=0,  help="Use to exclude children with mutations above standard deviations from mean.(Recommend 5)")
     parser.add_argument("--filter-loc-denovos",           type=int,   required=False,  dest="LOCI_THRESH",          default=0,  help="Use to exclude STR loci with called mutateions above standard deviations from mean.(Recommend 5)")
     parser.add_argument("--filter-posterior",             type=float, required=False,  dest="POSTERIOR_THRESH",     default=0,  help="Poserior probability threshould. (Recommend 0.8)")
-    parser.add_argument("--filter-step-size",             action="store_true",  required=False,      dest="STEP_SIZE",        default=False,          help="Use to exclude mutations not a unit of the STR motif size.")
+    #parser.add_argument("--filter-step-size",             action="store_true",  required=False,      dest="STEP_SIZE",        default=False,          help="Use to exclude mutations not a unit of the STR motif size.")
     # parser.add_argument("--min-denovos-child",       type=int,   required=False, dest="",                 default=0,        help="")
     # parser.add_argument("--max-denovos-child",       type=int,   required=False, dest="",             default=10000,        help="")
     # parser.add_argument("--min-loc-denovos",         type=int,   required=False, dest="",         default=0,        help=help_dict["--min-loc-denovos"])
@@ -34,11 +34,12 @@ def main():
     str_num_total = mutations.groupby(["chrom", "pos", "period", "str_id"]).child.count().reset_index(name='str_num_total')
 
     # Exclude dn STRs where mutation size is not multiple of period
-    n_step_removed=0
-    if args.STEP_SIZE:
-        mutations["unit"] = mutations["mutsize"]%mutations["period"] == 0
-        n_step_removed = len(mutations[~mutations.unit])
-        mutations = mutations[mutations.unit]
+    # NOTE: since mutsize is already number of units, this will not work correctly
+    #n_step_removed=0
+    #if args.STEP_SIZE:
+    #    mutations["unit"] = mutations["mutsize"]%mutations["period"] == 0
+    #    n_step_removed = len(mutations[~mutations.unit])
+    #    mutations = mutations[mutations.unit]
 
 
     # Exclude dn STRs based on posterior threshold
